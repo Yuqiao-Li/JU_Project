@@ -78,7 +78,7 @@
   - token→user_id→新建去重(D1,**contact 不参与**);容量 `pg_advisory_xact_lock` 锁内判 going/waitlisted(D7①);写侧 rate_limits 限流(D14);**返回 token + 确认态**(D15)。
   - 【禁止】裸 contact 不得改写/接管既有行、不得回带既有 token;容量不得无锁。 【测试】§1.5b。
 
-- [ ] **1.5c [SECURITY] get_guest_list**(0005d)【🟢】
+- [x] **1.5c [SECURITY] get_guest_list**(0005d)【🟢】
   - 仅 hide_guest_list=false;只 Going/Maybe;**只返回 display_name/status/plus_ones**(脱敏,D15);**调用者需 helper 已解锁**。
   - 【禁止】不含 Can't Go/contact/guest_id/token;未解锁不返回。 【测试】§1.5c。
 
