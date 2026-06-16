@@ -22,7 +22,7 @@
   - pnpm create next-app:App Router + TS(strict)+ Tailwind + ESLint。**加 `typecheck` 脚本(tsc --noEmit)**。
   - 【禁止】不引入重型 UI 库。 【验收】dev 启动;build 通过;`pnpm typecheck` 可跑。 【测试】N/A
 
-- [ ] **0.2 依赖 + Supabase 客户端** 【🟢】
+- [x] **0.2 依赖 + Supabase 客户端** 【🟢】
   - 装 supabase-js、@supabase/ssr、zod、@upstash/ratelimit、@upstash/redis。建 lib/supabase/{client,server,service}.ts(service=受信角色,**仅服务端**)。建 .env.local.example。
   - 【禁止】service-role key 不得进任何 NEXT_PUBLIC_* 或客户端可达代码。 【验收】三客户端可导入;typecheck 过。 【测试】N/A
 
