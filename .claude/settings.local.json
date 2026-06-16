@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(bash ./check-boundaries.sh)",
+      "Bash(echo \"exit=$?\")",
+      "Bash(git -c core.pager=cat status --short)",
+      "Bash(git -c core.pager=cat log --oneline -5)",
+      "Bash(bash -n run-agent.sh)",
+      "Bash(bash -n check-boundaries.sh)"
+    ]
+  }
+}

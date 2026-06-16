@@ -23,17 +23,24 @@ This is meant to become a real, shippable, commercial product. Optimize for
 - **Data access**: `@supabase/supabase-js`. Server Components use the server
   client; client components use the browser client.
 - **Auth**: Supabase Auth for HOSTS ONLY (email magic link + Google). Guests are
-  anonymous and identified by a per-guest token, never by an account.
+  anonymous and identified by a per-guest token; **login is never required to
+  RSVP**. (If a guest *happens* to be a logged-in user, their RSVP may be
+  optionally linked to that account via `guests.user_id` — set server-side — so
+  it shows up in their own events; the token stays the guest credential. D1.)
 - **Package manager**: pnpm.
 - **Deploy target**: Vercel (frontend) + Supabase cloud (backend). Keep it
   deployable at all times.
 
 ## Non-negotiable architecture rules
 
-1. **Guests never authenticate.** A guest RSVPs using the event's public slug.
-   Each guest gets a random `guest_token` (stored in localStorage + returned by
-   the RSVP RPC) that lets them edit *their own* RSVP later. Never require login
-   for guests.
+1. **Guests are never *required* to authenticate.** A guest RSVPs using the
+   event's public slug. Each guest gets a random `guest_token` (stored in
+   localStorage + returned by the RSVP RPC) that lets them edit *their own* RSVP
+   later — the token is the guest credential. Never require login for guests.
+   A logged-in user's RSVP MAY additionally be linked to their account
+   (`guests.user_id`, set server-side from `auth.uid()`), but this is optional
+   and never gates RSVP. **`contact` is host-visible metadata only and never an
+   identity/auth key** (D1).
 2. **All writes go through RLS or `SECURITY DEFINER` RPCs.** Never rely on the
    frontend to enforce permissions. The anon key is public; assume any client
    call can be forged. The database is the security boundary.
@@ -80,14 +87,19 @@ For every task in TASKS.md, in order:
    - If the task adds a migration, the SQL must be valid (apply against local
      supabase if available; otherwise lint the SQL).
 4. `git add -A && git commit` with a conventional-commit message
-   (`feat:`, `fix:`, `chore:`, `db:`).
-5. Check off the task in TASKS.md (change `[ ]` to `[x]`).
-6. Move to the next unchecked task.
+   (`feat:`, `fix:`, `chore:`, `db:`). **Do NOT check off the task and do NOT
+   claim completion.**
+5. **The orchestrator (run-agent.sh) owns check-off — you never do.** After your
+   round it re-runs `check-boundaries.sh` + the tests; only if they pass does it
+   change `[ ]` to `[x]`. If they fail it reverts your commit and records a
+   BLOCKER. **Never edit the `[ ]` / `[x]` / `[~]` markers in TASKS.md yourself.**
+6. The orchestrator selects the next unchecked task.
 
 If you cannot complete a task (missing secret, ambiguous spec, external
 dependency you can't resolve): append a clear entry to BLOCKERS.md describing
-what's blocked and why, then SKIP it and continue with the next task. Do not
-stop and wait for the user.
+what's blocked and why, then STOP (leave the task unchecked — do not mark it).
+The orchestrator marks a task `[~]` (blocked/skipped) after repeated failures
+and advances on its own. Do not stop and wait for the user.
 
 ## Coding standards
 
