@@ -82,7 +82,7 @@
   - 仅 hide_guest_list=false;只 Going/Maybe;**只返回 display_name/status/plus_ones**(脱敏,D15);**调用者需 helper 已解锁**。
   - 【禁止】不含 Can't Go/contact/guest_id/token;未解锁不返回。 【测试】§1.5c。
 
-- [ ] **1.5d [SECURITY] add_comment + get_comments**(0005e)【🟢】
+- [x] **1.5d [SECURITY] add_comment + get_comments**(0005e)【🟢】
   - get_comments 读开放(沿用 D3 可见性闸);add_comment 写门禁=helper、**作者服务端绑定**、rsvp_enabled=false → 仅 host、不写 gif(D6)。
   - 【禁止】未解锁不得发;不得信 client 传 author id;不接外部 GIF。 【测试】§1.5d / §4.1。
 
