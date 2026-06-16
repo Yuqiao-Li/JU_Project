@@ -26,7 +26,7 @@
   - 装 supabase-js、@supabase/ssr、zod、@upstash/ratelimit、@upstash/redis。建 lib/supabase/{client,server,service}.ts(service=受信角色,**仅服务端**)。建 .env.local.example。
   - 【禁止】service-role key 不得进任何 NEXT_PUBLIC_* 或客户端可达代码。 【验收】三客户端可导入;typecheck 过。 【测试】N/A
 
-- [ ] **0.3 测试框架 + 全局 setup** 【🟢】
+- [x] **0.3 测试框架 + 全局 setup** 【🟢】
   - 装 Vitest。**全局 setup**:对测试 DB 跑 `supabase db reset`(apply 全部迁移 + seed)→ 用 **auth admin API(service role)建 ≥2 个已确认 host 用户 + mint 会话**,导出给测试。anon 路径用 anon key;host 路径用会话;受信用 service。
   - 【验收】`pnpm test` 跑通 smoke + 全局 setup 能起 DB/建会话。 【测试】smoke 自身
 
