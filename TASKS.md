@@ -70,7 +70,7 @@
   - 实现 SCHEMA 的 `guest_unlock_status(event_id, token)`(token 或 user_id 命中 + status∈{going,maybe,waitlisted} + event_id scope)。后面 RPC **必须复用**。
   - 【禁止】门禁逻辑只此一处。 【验收】helper 存在且被引用。 【测试】**独立测试 agent**按 TEST-SPEC §1.5(helper 单测:token/user_id 命中、not_going 不解锁、跨活动 token、waitlisted 解锁)。
 
-- [ ] **1.5a [SECURITY] get_event_by_slug + 分级 + 私密闸 + 密码**(0005b)【🟢 不可打桩】
+- [x] **1.5a [SECURITY] get_event_by_slug + 分级 + 私密闸 + 密码**(0005b)【🟢 不可打桩】
   - 三类字段边界;**private 非 service_role → null**(D3);密码:`verify_event_password`(bcrypt)+ 锁定最小响应;count 受 hide_guest_count/私密约束(D7②);**必须调用 guest_unlock_status**。
   - 【禁止】不得无条件返回全字段;private 不得对 anon 裸奔;密码不得是桩;slug 禁 random()。 【验收】见 TEST-SPEC §1.5a。 【测试】§1.5a(独立测试 agent)。
 
