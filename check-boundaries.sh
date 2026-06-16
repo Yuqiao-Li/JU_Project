@@ -117,8 +117,11 @@ if have_migrations && [ "${RUN_DB_CHECKS:-0}" = "1" ] && command -v psql >/dev/n
   # 重置/应用迁移(优先 supabase db reset;否则假设已 apply)
   if command -v supabase >/dev/null 2>&1; then supabase db reset --db-url "$DBURL" >/dev/null 2>&1 || true; fi
   CLIENT_TABLES="'events','guests','rsvps','comments','date_votes','date_options','answers','questions','comment_reactions','event_photos','scheduled_reminders','broadcasts','rate_limits'"
+  # NOTE: error-stop comes from the `-v ON_ERROR_STOP=1` flag on the psql call
+  # below. An inline `\set ON_ERROR_STOP on` here would break the run — psql
+  # forbids mixing a backslash meta-command with SQL in a single `-c` string
+  # (它会把后续 SQL 当作 \set 的值,报 "Boolean expected"），使本护栏永远"执行失败".
   RLS_SQL=$(cat <<SQL
-\set ON_ERROR_STOP on
 -- 1) public 表未启用 RLS
 select 'NO_RLS:'||c.relname from pg_class c join pg_namespace n on n.oid=c.relnamespace
  where n.nspname='public' and c.relkind='r' and not c.relrowsecurity;
@@ -133,9 +136,13 @@ select 'PERMISSIVE_TRUE:'||tablename||'.'||policyname from pg_policies
 select 'ANON_POLICY:'||tablename||'.'||policyname from pg_policies
  where schemaname='public' and tablename in ($CLIENT_TABLES)
    and (roles && array['anon','public']::name[]);
--- 5) G8:storage.objects 必须有策略(且不是全放行)
-select 'STORAGE_NO_POLICY' where not exists
- (select 1 from pg_policies where schemaname='storage' and tablename='objects');
+-- 5) G8:storage.objects 的安全不变量 = RLS 启用 + 无全放行策略。
+-- 真正的洞是 RLS 关闭(anon 持表级 grant 会越权写);RLS 启用 + 无策略 = deny-all
+-- = 安全基线(buckets/策略在 1.7 才建,在此之前不能误判)。故断言"RLS 启用"而非
+-- "必须已有策略",并继续禁止 using(true)/with check(true)。anon 越权写由 1.7 的
+-- Storage 授权集成测试覆盖。
+select 'STORAGE_RLS_OFF' from pg_class c join pg_namespace n on n.oid=c.relnamespace
+ where n.nspname='storage' and c.relname='objects' and not c.relrowsecurity;
 select 'STORAGE_PERMISSIVE:'||policyname from pg_policies
  where schemaname='storage' and tablename='objects' and (coalesce(qual,'')='true' or coalesce(with_check,'')='true');
 SQL
@@ -146,7 +153,7 @@ SQL
   elif [ -n "$OFFENDERS" ]; then
     bad "RLS 违规:$(echo "$OFFENDERS" | tr '\n' ' ')"
   else
-    ok "DB 权威 RLS 校验通过(每表 RLS+策略、anon 无客数据表策略、无 using(true)、storage 有策略)"
+    ok "DB 权威 RLS 校验通过(每表 RLS+策略、anon 无客数据表策略、无 using(true)、storage RLS 启用)"
   fi
 else
   if have_migrations; then skip "DB 权威校验未运行(需 RUN_DB_CHECKS=1 + psql + SUPABASE_DB_URL)"; else skip "无 migration(RLS 校验)"; fi
