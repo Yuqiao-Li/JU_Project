@@ -62,7 +62,7 @@
   - 所有表 enable RLS。**events 策略键于 `host_id=auth.uid()`(D9)**;子表 host(经所有权)可读全部;**🟡 表仅 host SELECT、anon/guest deny(answers 正向 host 读)**;**rate_limits 显式 deny 策略 `for all to authenticated using(false) with check(false)`(M3,非"无策略",DEFINER RPC 以 owner 绕 RLS 访问)**;**storage.objects RLS(封面 host 写/公开读、相册私有,D16)**;profiles `id=auth.uid()`。**所有客数据表的 host 读写策略必须 `to authenticated`(I1,不得默认 public)。**
   - 【禁止】无表漏开 RLS;无 `using(true)`/`with check(true)`;**客数据表上不得有授予 anon/public 角色的策略**(G1/I1)。 【验收】每表 RLS+策略;护栏 DB 权威校验过。 【测试】见 TEST-SPEC §1.3。
 
-- [ ] **1.4 [SECURITY] anon 读写收敛**(0004)【🟢 不可打桩】
+- [x] **1.4 [SECURITY] anon 读写收敛**(0004)【🟢 不可打桩】
   - **REVOKE / 从不 GRANT(仅 anon)**:**anon** 对 events/guests/rsvps/comments/date_votes/answers 等客数据表**既无 SELECT 也无 INSERT/UPDATE/DELETE 策略/授权**(读写全经 RPC,D2/G1)。**host(authenticated)经所有权策略直接读自己活动数据(dashboard)——这些策略必须 `to authenticated`(I1,不得默认 public,否则护栏按 anon 策略拦)**。anon 永不可读 contact。
   - 【禁止】anon 不得直 SELECT 到任何客数据表(含 public events 行);客数据表上不得有授予 anon/public 角色的策略。 【验收】anon 直查这些表返回空/被拒;host 能读自己活动的 guests。 【测试】见 TEST-SPEC §1.4 / §1.3(host 自读)。
 
