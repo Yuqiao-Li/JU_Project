@@ -171,12 +171,16 @@ fi
 
 echo "── 护栏 7/8:测试存在性 + 防空测试(二道闸,m2)──"
 # find 取代脆弱的 ** glob;两条硬门禁 + 阶段关键字告警
-TESTGLOB=$(find "$WEB" tests -type f \( -name "*.test.ts" -o -name "*.test.tsx" -o -name "*.spec.ts" \) 2>/dev/null || true)
+# 仅扫项目测试,排除依赖/构建产物(与护栏 1/3 一致);否则 node_modules 里的 .test.ts 会污染断言/关键字判定。
+TESTGLOB=$(find "$WEB" tests -type f \( -name "*.test.ts" -o -name "*.test.tsx" -o -name "*.spec.ts" \) \
+             -not -path "*/node_modules/*" -not -path "*/.next/*" 2>/dev/null || true)
 if [ -z "$TESTGLOB" ]; then
   skip "尚无测试文件"
 else
+  # 先把命中收进变量,避免 `| grep -q .` 提前退出触发 SIGPIPE 在 pipefail 下误判失败。
   # (硬)防空测试:有测试文件却零断言(expect/assert)→ 失败
-  if echo "$TESTGLOB" | xargs -r grep -lE "expect\(|assert" 2>/dev/null | grep -q .; then
+  ASSERT_HITS=$(echo "$TESTGLOB" | xargs -r grep -lE "expect\(|assert" 2>/dev/null || true)
+  if [ -n "$ASSERT_HITS" ]; then
     ok "测试含断言"
   else
     bad "存在测试文件但无任何断言(expect/assert)—— 疑似空测试"
@@ -184,7 +188,8 @@ else
   # 门禁 helper 已落却无测试引用它 → 失败,但**仅轮末编排器强制**(ROUND_END=1)。
   # 实现 agent 自检时降为提示:[SECURITY] 任务测试在另一回合(测试 agent)写,实现回合此处必然尚无。
   if have_migrations && grep -rl "guest_unlock_status" "$SQLDIR" >/dev/null 2>&1; then
-    if echo "$TESTGLOB" | xargs -r grep -l "guest_unlock_status" 2>/dev/null | grep -q .; then
+    HELPER_HITS=$(echo "$TESTGLOB" | xargs -r grep -l "guest_unlock_status" 2>/dev/null || true)
+    if [ -n "$HELPER_HITS" ]; then
       ok "门禁 helper 有测试引用"
     elif [ "${ROUND_END:-0}" = "1" ]; then
       bad "guest_unlock_status 已实现但无测试引用它(轮末二道闸)"
@@ -195,7 +200,8 @@ else
   # (软)阶段相关关键字:仅告警,早期阶段未覆盖属正常
   MISSING_KW=""
   for kw in location_text waitlisted not_going; do
-    echo "$TESTGLOB" | xargs -r grep -l "$kw" 2>/dev/null | grep -q . || MISSING_KW="$MISSING_KW $kw"
+    KW_HITS=$(echo "$TESTGLOB" | xargs -r grep -l "$kw" 2>/dev/null || true)
+    [ -n "$KW_HITS" ] || MISSING_KW="$MISSING_KW $kw"
   done
   [ -n "$MISSING_KW" ] && say "(提示)测试中尚未出现关键字:$MISSING_KW"
 fi
