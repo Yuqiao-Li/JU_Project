@@ -38,7 +38,7 @@
   - 建 supabase/migrations/、空 seed.sql、`package.json` 脚本 `db:reset`/`db:apply`(真正 apply,不只文档)。
   - 【验收】结构符合 CLAUDE.md;`db:reset` 可对本地 supabase 跑。 【测试】N/A
 
-- [ ] **0.6 provision + bootstrap 测试 DB** 【🟢】
+- [x] **0.6 provision + bootstrap 测试 DB** 【🟢】
   - **本地 `supabase start`**(Docker + supabase CLI);确保 anon/authenticated/service_role + auth admin + PostgREST 可用。脚本化:迁移 apply + ≥2 host 用户/会话 + seed,接进 0.3 全局 setup。
   - 【禁止】不依赖远端云库做并发测试。 【验收】`supabase start` 起库;全局 setup 能 reset+建会话。 【测试】N/A
 
