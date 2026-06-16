@@ -1,0 +1,4 @@
+# Shell scripts MUST stay LF — they run under bash (Git Bash / WSL / container).
+# CRLF would break the shebang + GNU grep/sed and make the unattended orchestrator
+# (run-agent.sh / check-boundaries.sh) fail to start on checkout / on another machine.
+*.sh text eol=lf
