@@ -46,7 +46,7 @@
 
 ## Phase 1 — 数据模型 + 安全(后端,一次建对,不可打桩)
 
-- [ ] **1.1a 核心表 A migration**(0001a:profiles + events)【🟢】
+- [x] **1.1a 核心表 A migration**(0001a:profiles + events)【🟢】
   - 建 profiles(含 username 唯一索引)、events(**SCHEMA §2 全部列**,含 🟡 留白列与 `view_password_hash`)。**任务体贴 SCHEMA §2 列清单做确定性验收**。
   - 【禁止】events 留白列必须全建(护栏 grep 列名)。 【验收】SQL 有效;列/约束齐。 【测试】集成:可插入 host+event。
 
