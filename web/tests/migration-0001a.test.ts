@@ -143,11 +143,12 @@ describe("task 1.1a: core tables A migration (profiles + events)", () => {
   });
 
   it.skipIf(!LOCAL_UP)("enforces the profiles.username unique index", () => {
-    // host[1] is a distinct real user; reusing host[0]'s username must fail.
+    // host[1]'s profile already exists (created by the 1.1b auth.users trigger),
+    // so giving it host[0]'s username must violate the unique index. (A bare
+    // INSERT here would now collide on the pkey instead, masking what we test.)
     expect(() =>
       runSql(
-        `insert into public.profiles (id, display_name, username)
-         values ('${otherHostId}', 'Host B', '${SHARED_USERNAME}');`,
+        `update public.profiles set username = '${SHARED_USERNAME}' where id = '${otherHostId}';`,
       ),
     ).toThrow();
   });
@@ -167,11 +168,14 @@ describe("task 1.1a: core tables A migration (profiles + events)", () => {
   });
 
   it.skipIf(!LOCAL_UP)("allows multiple profiles with NULL username (nullable unique)", () => {
-    // Nullable unique index: many NULLs coexist. Insert + rollback, no residue.
+    // Nullable unique index: many NULLs coexist. profiles.id FKs to auth.users,
+    // so the only rows we can touch are the two real host users (their profiles
+    // are created by the 1.1b auth.users trigger). Setting BOTH usernames NULL
+    // would violate a NULL-deduping unique index; Postgres allows it. Rollback —
+    // no residue.
     runSql(
       `begin;
-       insert into public.profiles (id, display_name, username)
-         values ('${otherHostId}', 'Host B', null);
+       update public.profiles set username = null where id in ('${hostId}', '${otherHostId}');
        rollback;`,
     );
     // Reaching here without a throw is the assertion; make it explicit.
