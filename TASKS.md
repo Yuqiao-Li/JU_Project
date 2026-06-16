@@ -30,7 +30,7 @@
   - 装 Vitest。**全局 setup**:对测试 DB 跑 `supabase db reset`(apply 全部迁移 + seed)→ 用 **auth admin API(service role)建 ≥2 个已确认 host 用户 + mint 会话**,导出给测试。anon 路径用 anon key;host 路径用会话;受信用 service。
   - 【验收】`pnpm test` 跑通 smoke + 全局 setup 能起 DB/建会话。 【测试】smoke 自身
 
-- [ ] **0.4 护栏脚本 check-boundaries.sh** 【🟢】
+- [x] **0.4 护栏脚本 check-boundaries.sh** 【🟢】
   - 实现见 TEST-SPEC/SCHEMA 的护栏要求:① 留白前端黑名单(路径段+内容)② slug 密码学随机(函数体内)③ 禁用模式(sessionStorage/service key 进客户端/不提交密钥,git 未 init 判失败)④ **DB 权威 RLS 校验**(apply 到 scratch DB 查 pg_class/pg_policies:每表 RLS 启用+有非全放行策略;**仅 anon 对客数据表无任何读写策略;host(authenticated)经所有权策略读自己活动数据**;storage schema)⑤ **helper grep**(get_event_by_slug/get_guest_list/add_comment 函数体须含 `guest_unlock_status(`)⑥ 测试存在性+关键断言关键字 ⑦ tsc+lint+build(仅 web 触及时)。区分 SKIPPED/PASSED;关键任务"产出物必须存在"。
   - 【验收】脚本可执行;`bash -n` 过;对当前(空)仓库跑输出 SKIPPED 而非误判失败。 【测试】N/A
 
