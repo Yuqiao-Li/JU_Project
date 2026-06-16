@@ -66,7 +66,7 @@
   - **REVOKE / 从不 GRANT(仅 anon)**:**anon** 对 events/guests/rsvps/comments/date_votes/answers 等客数据表**既无 SELECT 也无 INSERT/UPDATE/DELETE 策略/授权**(读写全经 RPC,D2/G1)。**host(authenticated)经所有权策略直接读自己活动数据(dashboard)——这些策略必须 `to authenticated`(I1,不得默认 public,否则护栏按 anon 策略拦)**。anon 永不可读 contact。
   - 【禁止】anon 不得直 SELECT 到任何客数据表(含 public events 行);客数据表上不得有授予 anon/public 角色的策略。 【验收】anon 直查这些表返回空/被拒;host 能读自己活动的 guests。 【测试】见 TEST-SPEC §1.4 / §1.3(host 自读)。
 
-- [ ] **1.5.0 [SECURITY] 共享门禁 helper guest_unlock_status**(0005a)【🟢 前置】
+- [x] **1.5.0 [SECURITY] 共享门禁 helper guest_unlock_status**(0005a)【🟢 前置】
   - 实现 SCHEMA 的 `guest_unlock_status(event_id, token)`(token 或 user_id 命中 + status∈{going,maybe,waitlisted} + event_id scope)。后面 RPC **必须复用**。
   - 【禁止】门禁逻辑只此一处。 【验收】helper 存在且被引用。 【测试】**独立测试 agent**按 TEST-SPEC §1.5(helper 单测:token/user_id 命中、not_going 不解锁、跨活动 token、waitlisted 解锁)。
 
