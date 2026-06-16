@@ -74,7 +74,7 @@
   - 三类字段边界;**private 非 service_role → null**(D3);密码:`verify_event_password`(bcrypt)+ 锁定最小响应;count 受 hide_guest_count/私密约束(D7②);**必须调用 guest_unlock_status**。
   - 【禁止】不得无条件返回全字段;private 不得对 anon 裸奔;密码不得是桩;slug 禁 random()。 【验收】见 TEST-SPEC §1.5a。 【测试】§1.5a(独立测试 agent)。
 
-- [ ] **1.5b [SECURITY] submit_rsvp**(0005c)【🟢 不可打桩】
+- [x] **1.5b [SECURITY] submit_rsvp**(0005c)【🟢 不可打桩】
   - token→user_id→新建去重(D1,**contact 不参与**);容量 `pg_advisory_xact_lock` 锁内判 going/waitlisted(D7①);写侧 rate_limits 限流(D14);**返回 token + 确认态**(D15)。
   - 【禁止】裸 contact 不得改写/接管既有行、不得回带既有 token;容量不得无锁。 【测试】§1.5b。
 
