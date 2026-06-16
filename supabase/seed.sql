@@ -1,0 +1,6 @@
+-- seed.sql — demo data for local dev, applied by `supabase db reset`
+-- (config.toml [db.seed].sql_paths = ["./seed.sql"]).
+--
+-- Intentionally empty for now: real seed data (1 host, public/private events,
+-- guests/rsvps/comments, a date poll) lands in task 1.8 once the schema exists.
+-- Keeping this file present (not just documented) so `db:reset` runs cleanly.

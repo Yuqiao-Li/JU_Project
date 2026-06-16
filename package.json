@@ -1,0 +1,10 @@
+{
+  "name": "partiful-clone",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Partiful clone — Supabase backend + Next.js (web/). Root scripts wrap the Supabase CLI and must run from the repo root, where supabase/config.toml lives.",
+  "scripts": {
+    "db:reset": "supabase db reset",
+    "db:apply": "supabase migration up"
+  }
+}

@@ -1,0 +1,3 @@
+# Numbered SQL migrations live here (CLAUDE.md repo layout).
+# This .gitkeep tracks the empty directory until the first migration (task 1.1a).
+# It is not a .sql file, so the guard's migration checks correctly stay SKIPPED.
