@@ -50,7 +50,7 @@
   - 建 profiles(含 username 唯一索引)、events(**SCHEMA §2 全部列**,含 🟡 留白列与 `view_password_hash`)。**任务体贴 SCHEMA §2 列清单做确定性验收**。
   - 【禁止】events 留白列必须全建(护栏 grep 列名)。 【验收】SQL 有效;列/约束齐。 【测试】集成:可插入 host+event。
 
-- [ ] **1.1b 核心表 B migration**(0001b:event_hosts + guests + rsvps + 触发器)【🟢】
+- [x] **1.1b 核心表 B migration**(0001b:event_hosts + guests + rsvps + 触发器)【🟢】
   - 建 event_hosts、guests(**含 `user_id`**)、rsvps;索引;updated_at 触发器;**events AFTER INSERT 触发器写 event_hosts owner 行**;**auth.users AFTER INSERT 触发器建 profiles**。
   - 【验收】SQL 有效;触发器生效。 【测试】集成:建 event 自动有 owner 行 + 注册自动建 profiles。
 
