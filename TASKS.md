@@ -58,7 +58,7 @@
   - 建 comments、comment_reactions、event_photos、date_options、date_votes、questions(type 含 social)、answers、scheduled_reminders、broadcasts、**rate_limits(D14)**。FK + 约束(comments guest_id/host_id 恰一非空;rate_limits unique(bucket_key,window_start))。
   - 【禁止】**只建表,不得创建任何对应前端**(护栏黑名单)。 【验收】SQL 有效。 【测试】集成:每表插合法/违约束被拒。
 
-- [ ] **1.3 [SECURITY] 启用 RLS + 策略**(0003)【🟢】
+- [x] **1.3 [SECURITY] 启用 RLS + 策略**(0003)【🟢】
   - 所有表 enable RLS。**events 策略键于 `host_id=auth.uid()`(D9)**;子表 host(经所有权)可读全部;**🟡 表仅 host SELECT、anon/guest deny(answers 正向 host 读)**;**rate_limits 显式 deny 策略 `for all to authenticated using(false) with check(false)`(M3,非"无策略",DEFINER RPC 以 owner 绕 RLS 访问)**;**storage.objects RLS(封面 host 写/公开读、相册私有,D16)**;profiles `id=auth.uid()`。**所有客数据表的 host 读写策略必须 `to authenticated`(I1,不得默认 public)。**
   - 【禁止】无表漏开 RLS;无 `using(true)`/`with check(true)`;**客数据表上不得有授予 anon/public 角色的策略**(G1/I1)。 【验收】每表 RLS+策略;护栏 DB 权威校验过。 【测试】见 TEST-SPEC §1.3。
 
