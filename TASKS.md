@@ -54,7 +54,7 @@
   - 建 event_hosts、guests(**含 `user_id`**)、rsvps;索引;updated_at 触发器;**events AFTER INSERT 触发器写 event_hosts owner 行**;**auth.users AFTER INSERT 触发器建 profiles**。
   - 【验收】SQL 有效;触发器生效。 【测试】集成:建 event 自动有 owner 行 + 注册自动建 profiles。
 
-- [ ] **1.2 扩展表 migration**(0002)【🟡 建表 + rate_limits】
+- [x] **1.2 扩展表 migration**(0002)【🟡 建表 + rate_limits】
   - 建 comments、comment_reactions、event_photos、date_options、date_votes、questions(type 含 social)、answers、scheduled_reminders、broadcasts、**rate_limits(D14)**。FK + 约束(comments guest_id/host_id 恰一非空;rate_limits unique(bucket_key,window_start))。
   - 【禁止】**只建表,不得创建任何对应前端**(护栏黑名单)。 【验收】SQL 有效。 【测试】集成:每表插合法/违约束被拒。
 
