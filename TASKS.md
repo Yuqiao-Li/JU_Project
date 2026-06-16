@@ -34,7 +34,7 @@
   - 实现见 TEST-SPEC/SCHEMA 的护栏要求:① 留白前端黑名单(路径段+内容)② slug 密码学随机(函数体内)③ 禁用模式(sessionStorage/service key 进客户端/不提交密钥,git 未 init 判失败)④ **DB 权威 RLS 校验**(apply 到 scratch DB 查 pg_class/pg_policies:每表 RLS 启用+有非全放行策略;**仅 anon 对客数据表无任何读写策略;host(authenticated)经所有权策略读自己活动数据**;storage schema)⑤ **helper grep**(get_event_by_slug/get_guest_list/add_comment 函数体须含 `guest_unlock_status(`)⑥ 测试存在性+关键断言关键字 ⑦ tsc+lint+build(仅 web 触及时)。区分 SKIPPED/PASSED;关键任务"产出物必须存在"。
   - 【验收】脚本可执行;`bash -n` 过;对当前(空)仓库跑输出 SKIPPED 而非误判失败。 【测试】N/A
 
-- [ ] **0.5 Supabase 目录骨架 + db 脚本** 【🟢】
+- [x] **0.5 Supabase 目录骨架 + db 脚本** 【🟢】
   - 建 supabase/migrations/、空 seed.sql、`package.json` 脚本 `db:reset`/`db:apply`(真正 apply,不只文档)。
   - 【验收】结构符合 CLAUDE.md;`db:reset` 可对本地 supabase 跑。 【测试】N/A
 
