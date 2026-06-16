@@ -4,6 +4,9 @@
   "private": true,
   "description": "Partiful clone — Supabase backend + Next.js (web/). Root scripts wrap the Supabase CLI and must run from the repo root, where supabase/config.toml lives.",
   "scripts": {
+    "db:start": "supabase start",
+    "db:stop": "supabase stop",
+    "db:status": "supabase status",
     "db:reset": "supabase db reset",
     "db:apply": "supabase migration up"
   }

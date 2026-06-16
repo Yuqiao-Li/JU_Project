@@ -7,6 +7,7 @@ import type { TestProject } from "vitest/node";
 
 import type { TestHost, TestInfra } from "./infra";
 import { loadTestEnv, WEB_DIR } from "./load-env";
+import { resolveLocalSupabase } from "./local-supabase";
 
 const REPO_ROOT = resolve(WEB_DIR, "..");
 
@@ -87,6 +88,21 @@ async function ensureHost(
 
 export default async function setup({ provide }: TestProject) {
   loadTestEnv();
+
+  // Task 0.6: tests run against the LOCAL supabase stack — never a remote
+  // project (concurrency + db reset would be unsafe; TASKS 0.6 不依赖远端云库).
+  // Discover (auto-starting if needed) and inject its config so `supabase db
+  // reset`, the three client paths, and SUPABASE_DB_URL all agree, overriding
+  // any placeholder values left in web/.env.local.
+  const local = resolveLocalSupabase();
+  if (local) {
+    process.env.NEXT_PUBLIC_SUPABASE_URL = local.apiUrl;
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = local.anonKey;
+    process.env.SUPABASE_SERVICE_ROLE_KEY = local.serviceRoleKey;
+    // Don't clobber an SUPABASE_DB_URL the orchestrator already exported.
+    if (!process.env.SUPABASE_DB_URL) process.env.SUPABASE_DB_URL = local.dbUrl;
+    log(`using local supabase stack at ${local.apiUrl}`);
+  }
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? null;
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? null;
