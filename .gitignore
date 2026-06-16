@@ -1,0 +1,12 @@
+.env
+.env.*
+node_modules/
+.next/
+agent-logs/
+.agent-state/
+QUOTA-BLOCKED.md
+
+# supabase start 生成的本地状态(不提交)
+supabase/.branches/
+supabase/.temp/
+supabase/snippets/
