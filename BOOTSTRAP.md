@@ -65,6 +65,14 @@ UPSTASH_REDIS_REST_TOKEN=<token>
 - [ ] 仓库已挂载/克隆进该环境,`.sh` 是 LF 行尾(见顶部 Windows 提示)
 - [ ] `claude` 在该隔离环境内已登录
 
+### A6 — 常开/不休眠(额度自愈的硬前提)
+> 额度耗尽时 `run-agent.sh` 会 **sleep 到额度重置再自动续跑**(5 小时窗口可能睡数小时)。这段 sleep 活在该进程里:
+> **机器休眠/关机、终端关闭、SSH 断开都会中断 sleep → 自愈失效、续跑落空。**
+- [ ] 运行 `run-agent.sh` 的 **机器 / VM / 容器在整段运行(含额度 sleep)期间保持常开,系统休眠/睡眠已关闭**
+- [ ] 进程**脱离终端**:用 `tmux` / `screen` 或 `nohup … &`(见 D1),关终端 / 断 SSH 不会杀掉它
+- [ ] 建议跑在**常开机器或云 VM**;笔记本务必接电源 + 禁睡眠(合盖即断)
+- [ ] 注:`MAX_WALL_HOURS`(默认 72h)只是失控 sleep 的上限兜底,**不替代常开**——它管不了机器休眠
+
 ---
 
 ## B. 护栏自验(开跑前故意触发每道护栏,确认它真能抓)
@@ -137,6 +145,17 @@ RUN_DB_CHECKS=1 SUPABASE_DB_URL="$SUPABASE_DB_URL" bash ./check-boundaries.sh
 - [ ] 全部探针删除后跑:`RUN_DB_CHECKS=1 SUPABASE_DB_URL="$SUPABASE_DB_URL" bash ./check-boundaries.sh`
 - [ ] **预期**:无 `❌`;早期阶段(尚无 web/migrations)各段为 `⏭ SKIPPED`,总判 `✅ 护栏全过`
 - [ ] `git status --short` 干净(无残留探针文件、无误加进 git 的东西)
+
+### B7 — 额度自愈冒烟测试(确认 检测→等待→续跑 不被误判为失败)— **已通过 ✅**
+> 不真撞墙地验证额度自愈链路:`SIMULATE_QUOTA=N` 在第 N 轮注入一次**模拟**额度耗尽(**开关驱动,不靠匹配输出内容**),
+> 用短 sleep 代替真实重置时间。本批改动已在隔离 stub 环境端到端验证(9/9 断言)。开跑前在你的环境再跑一遍确认。
+> 注:第 N 轮**之前**的任务会真实执行,故请在已备好测试 DB 的隔离环境里跑。
+- [ ] **usage / 5h 分支**:`SIMULATE_QUOTA=2 SIMULATE_QUOTA_SLEEP_SECS=30 QUOTA_HEARTBEAT_SECS=10 ./run-agent.sh`
+- [ ] **预期**:第 2 轮 `🧪 SIMULATE` → `😴 额度耗尽` + `等待重置中` 心跳 → `🔁 …额度等待结束 → 重启` → 自动续跑;
+      模拟任务最终 **`[x]`**(不是 `[~]`、无 BLOCKERS、无回退);`🧪 SIMULATE` 全程**只出现一次**(re-exec 不重复模拟)
+- [ ] **weekly 分支**:`SIMULATE_QUOTA=2 SIMULATE_QUOTA_KIND=weekly ./run-agent.sh`
+- [ ] **预期**:写出 **`QUOTA-BLOCKED.md`**(含重置时间 + 续跑说明)并 **exit 76**;不 sleep、不误标失败
+- [ ] 验完清理:`git status` 干净(`QUOTA-BLOCKED.md` 已被 `.gitignore`);需要时 `rm -f .agent-state/*.att` 重置重试计数
 
 ---
 
