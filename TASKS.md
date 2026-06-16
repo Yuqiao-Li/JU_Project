@@ -18,7 +18,7 @@
 
 ## Phase 0 — 骨架 + 测试框架 + 护栏 + 测试 DB
 
-- [ ] **0.1 Scaffold Next.js** 【🟢】
+- [x] **0.1 Scaffold Next.js** 【🟢】
   - pnpm create next-app:App Router + TS(strict)+ Tailwind + ESLint。**加 `typecheck` 脚本(tsc --noEmit)**。
   - 【禁止】不引入重型 UI 库。 【验收】dev 启动;build 通过;`pnpm typecheck` 可跑。 【测试】N/A
 
