@@ -112,7 +112,7 @@
   - magic link(必做)+ Google。**profiles 由触发器建档**(非 client upsert);**username 唯一靠 DB 索引**,设置 UI 查仅提示。/dashboard 守卫。
   - 【禁止】不实现微信;guest 无任何登录入口;client 不得传 profiles.id。 【验收】登录/登出;profile 自动建;守卫生效。 【测试】集成(admin 会话):首登后 profiles 存在;不能为 id≠auth.uid() 写 profiles;并发抢同名只一个胜。
 
-- [ ] **2.2a 建/改活动表单 — 核心字段** 【🟢】
+- [x] **2.2a 建/改活动表单 — 核心字段** 【🟢】
   - /dashboard/events/new 与 [id]/edit。字段:标题、描述、日期(+TBD)、地点(text+url+city)、可见性、容量、+1、RSVP开关、**密码(可选,设/清)**。create 生成 slug(event_hosts owner 行由触发器自动)。草稿→发布。zod 校验。
   - 【禁止】问卷/co-host/审核等 🟡 不做 UI。 【验收】建活动→发布→得 /{slug};host 立刻能读自己刚建的活动。 【测试】集成:生成合法唯一 slug;host 读回自己活动。
 
