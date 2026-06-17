@@ -2,6 +2,9 @@
 
 import { useActionState, useState } from "react";
 
+import { CoverUploader } from "@/components/events/cover-uploader";
+import { DEFAULT_THEME, EFFECT_PRESETS, THEME_SWATCHES, type ThemeKey } from "@/lib/events/theme";
+
 import { createEvent, type EventFormState, updateEvent } from "./actions";
 
 const INITIAL: EventFormState = { status: "idle" };
@@ -23,6 +26,11 @@ export type EventDefaults = {
   rsvpEnabled: boolean;
   status: string;
   hasPassword: boolean;
+  coverImageUrl: string;
+  themeColor: ThemeKey;
+  effect: string;
+  chipInUrl: string;
+  chipInNote: string;
 };
 
 const BLANK: EventDefaults = {
@@ -42,6 +50,11 @@ const BLANK: EventDefaults = {
   rsvpEnabled: true,
   status: "draft",
   hasPassword: false,
+  coverImageUrl: "",
+  themeColor: DEFAULT_THEME,
+  effect: "none",
+  chipInUrl: "",
+  chipInNote: "",
 };
 
 const inputClass =
@@ -74,6 +87,7 @@ export function EventForm({ mode, defaults }: { mode: "create" | "edit"; default
   const [dateTbd, setDateTbd] = useState(d.dateTbd);
   const [allowPlusOnes, setAllowPlusOnes] = useState(d.allowPlusOnes);
   const [clearPassword, setClearPassword] = useState(false);
+  const [themeColor, setThemeColor] = useState<ThemeKey>(d.themeColor);
 
   const publishLabel =
     mode === "create" ? "Publish event" : d.status === "published" ? "Save changes" : "Publish";
@@ -114,6 +128,50 @@ export function EventForm({ mode, defaults }: { mode: "create" | "edit"; default
             placeholder="Drinks, a playlist, and a view. Come through."
             className="w-full rounded-xl border border-line bg-surface-2 px-4 py-3 text-paper placeholder:text-muted/60 focus:border-iris focus:outline-none"
           />
+        </div>
+      </section>
+
+      {/* Look — cover, theme color, effect */}
+      <section className="flex flex-col gap-5">
+        <SectionLabel>Look</SectionLabel>
+        <CoverUploader eventId={mode === "edit" ? d.id : null} initialUrl={d.coverImageUrl} />
+
+        <div className="flex flex-col gap-2">
+          <span className="text-sm text-muted">Theme color</span>
+          <div className="flex flex-wrap gap-3">
+            {THEME_SWATCHES.map((s) => (
+              <label key={s.key} className="cursor-pointer">
+                <input
+                  type="radio"
+                  name="theme_color"
+                  value={s.key}
+                  checked={themeColor === s.key}
+                  onChange={() => setThemeColor(s.key)}
+                  className="peer sr-only"
+                />
+                <span
+                  aria-hidden
+                  title={s.label}
+                  style={{ backgroundColor: s.hex }}
+                  className={`block size-9 rounded-full ring-2 ring-offset-2 ring-offset-ink transition peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-iris ${themeColor === s.key ? "ring-paper" : "ring-transparent"}`}
+                />
+                <span className="sr-only">{s.label}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <label htmlFor="effect" className="text-sm text-muted">
+            Effect <span className="text-muted/60">— a little flourish, kept subtle</span>
+          </label>
+          <select id="effect" name="effect" defaultValue={d.effect || "none"} className={inputClass}>
+            {EFFECT_PRESETS.map((e) => (
+              <option key={e.key} value={e.key}>
+                {e.label}
+              </option>
+            ))}
+          </select>
         </div>
       </section>
 
@@ -257,6 +315,42 @@ export function EventForm({ mode, defaults }: { mode: "create" | "edit"; default
           <input type="checkbox" name="rsvp_enabled" defaultChecked={d.rsvpEnabled} className="size-4 accent-coral" />
           Collect RSVPs <span className="text-sm text-muted">— turn off to just share the details</span>
         </label>
+      </section>
+
+      {/* Chip in — display-only payment link */}
+      <section className="flex flex-col gap-5">
+        <SectionLabel>Chip in</SectionLabel>
+        <p className="text-sm text-muted">
+          Splitting the cost? Drop a payment link — guests see it on the page. We don&apos;t handle the money.
+        </p>
+        <div className="flex flex-col gap-2">
+          <label htmlFor="chip_in_url" className="text-sm text-muted">
+            Payment link <span className="text-muted/60">(optional)</span>
+          </label>
+          <input
+            id="chip_in_url"
+            name="chip_in_url"
+            type="url"
+            maxLength={2000}
+            defaultValue={d.chipInUrl}
+            placeholder="https://venmo.com/u/you"
+            className={inputClass}
+          />
+        </div>
+        <div className="flex flex-col gap-2">
+          <label htmlFor="chip_in_note" className="text-sm text-muted">
+            What it&apos;s for <span className="text-muted/60">(optional)</span>
+          </label>
+          <input
+            id="chip_in_note"
+            name="chip_in_note"
+            type="text"
+            maxLength={280}
+            defaultValue={d.chipInNote}
+            placeholder="$10 covers drinks and snacks"
+            className={inputClass}
+          />
+        </div>
       </section>
 
       {/* Privacy */}

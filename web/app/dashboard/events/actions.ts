@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 
 import { type EventInput, type PasswordChange, parseEventForm } from "@/lib/events/schema";
 import { createClient } from "@/lib/supabase/server";
+import type { Json } from "@/types/database";
 
 export type EventFormState = {
   status: "idle" | "success" | "error";
@@ -36,6 +37,12 @@ function toEventColumns(input: EventInput) {
     allow_plus_ones: input.allow_plus_ones,
     max_plus_ones: input.max_plus_ones,
     rsvp_enabled: input.rsvp_enabled,
+    // Task 2.2b — look + chip-in. theme is a small jsonb { color }.
+    cover_image_url: input.cover_image_url,
+    theme: input.theme as Json,
+    effect: input.effect,
+    chip_in_url: input.chip_in_url,
+    chip_in_note: input.chip_in_note,
   };
 }
 

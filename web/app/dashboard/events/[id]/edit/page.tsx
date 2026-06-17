@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
+import { themeColorFromJson } from "@/lib/events/theme";
 import { createClient } from "@/lib/supabase/server";
 
 import { EventForm, type EventDefaults } from "../../event-form";
@@ -30,7 +31,7 @@ export default async function EditEventPage({
   const { data: event } = await supabase
     .from("events")
     .select(
-      "id, slug, title, description, date_tbd, starts_at, ends_at, location_text, location_url, location_city, visibility, capacity, allow_plus_ones, max_plus_ones, rsvp_enabled, status, view_password_hash",
+      "id, slug, title, description, date_tbd, starts_at, ends_at, location_text, location_url, location_city, visibility, capacity, allow_plus_ones, max_plus_ones, rsvp_enabled, status, view_password_hash, cover_image_url, theme, effect, chip_in_url, chip_in_note",
     )
     .eq("id", id)
     .maybeSingle();
@@ -54,6 +55,11 @@ export default async function EditEventPage({
     rsvpEnabled: event.rsvp_enabled,
     status: event.status,
     hasPassword: event.view_password_hash !== null,
+    coverImageUrl: event.cover_image_url ?? "",
+    themeColor: themeColorFromJson(event.theme),
+    effect: event.effect ?? "none",
+    chipInUrl: event.chip_in_url ?? "",
+    chipInNote: event.chip_in_note ?? "",
   };
 
   return (
