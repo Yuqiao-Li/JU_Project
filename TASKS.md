@@ -132,7 +132,7 @@
   - /{slug}:**SSR 经受信角色调 get_event_by_slug**。**严格分级**:未解锁只见第一类;解锁后第二类(完整地址)。私密只走 SSR;密码活动显示密码框(verify_event_password,验过发短时凭证)。
   - 【禁止】未解锁页**绝不渲染完整地址/名单**(数据层就不返回);anon 直打 private RPC 被拒。 【验收/测试】见 TEST-SPEC §2.4。
 
-- [ ] **2.4b [SECURITY] RSVP 组件 + token + waitlist** 【🟢】
+- [x] **2.4b [SECURITY] RSVP 组件 + token + waitlist** 【🟢】
   - RSVP 组件(name+状态+可选+1+可选 contact)调 submit_rsvp;**token 存 localStorage,绝不进 URL**;成功后重调 get_event_by_slug(token) 渲染解锁视图(D15);复访预填+可改;容量满显示 waitlist。
   - 【禁止】token 绝不进 URL/可分享处;无 localStorage 外违规存储。 【验收/测试】见 TEST-SPEC §2.4。
 
