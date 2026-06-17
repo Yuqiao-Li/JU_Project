@@ -1,3 +1,4 @@
+import { AddToCalendar } from "@/components/events/add-to-calendar";
 import { formatEventWhen } from "@/lib/events/format";
 import { themeColorFromJson, themeSwatch } from "@/lib/events/theme";
 import type { EventView } from "@/lib/events/view";
@@ -23,10 +24,17 @@ import type { EventView } from "@/lib/events/view";
 export function EventView({
   event,
   rsvpSlot,
+  guestListSlot,
 }: {
   event: EventView;
   /** The RSVP interaction (client), slotted in by `EventClient`. */
   rsvpSlot?: React.ReactNode;
+  /**
+   * The "who's coming" list (client), slotted in by `EventClient` (task 3.1). It is
+   * second-tier: it only renders for an unlocked viewer and only the data the RPC
+   * already desensitized, so a locked view shows nothing here (the slot returns null).
+   */
+  guestListSlot?: React.ReactNode;
 }) {
   const accent = themeSwatch(themeColorFromJson(event.theme)).hex;
   const when = formatEventWhen(event.starts_at ?? null, event.date_tbd ?? false);
@@ -66,6 +74,9 @@ export function EventView({
           )}
         </div>
       )}
+
+      {/* ── Add to calendar (first tier; no date ⇒ renders nothing) ───────────── */}
+      <AddToCalendar event={event} />
 
       {/* ── Where ────────────────────────────────────────────────────────────── */}
       <Section title="Where">
@@ -122,6 +133,11 @@ export function EventView({
           slots in here from EventClient. It re-reads the event with the token on
           success to reveal the unlocked view above (task 2.4b). */}
       {rsvpSlot}
+
+      {/* ── Who's coming (second tier; unlocked viewers only, task 3.1) ─────────
+          Renders only once an RSVP has unlocked the view — the data layer doesn't
+          return the list otherwise, so for a locked viewer this slot is null. */}
+      {guestListSlot}
     </article>
   );
 }

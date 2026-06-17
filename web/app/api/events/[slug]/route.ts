@@ -6,6 +6,7 @@ import {
   verifyPasswordCredential,
 } from "@/lib/events/password-credential";
 import { readEventBySlug } from "@/lib/events/read-event";
+import { readGuestList } from "@/lib/events/read-guest-list";
 import { ipFromHeaders } from "@/lib/ratelimit/ip";
 import { rateLimit } from "@/lib/ratelimit/limiter";
 import { rateLimitedResponse } from "@/lib/ratelimit/guard";
@@ -61,5 +62,16 @@ export async function GET(
     );
   }
 
-  return NextResponse.json({ event }, { headers: { "Cache-Control": "no-store" } });
+  // Guest list (second tier, task 3.1) rides this SAME tiered funnel so the client polls
+  // ONE endpoint. Fetched only for an UNLOCKED caller presenting a token — get_guest_list
+  // re-checks the unlock gate itself, so this is an optimisation (skip the DB call for
+  // locked/anon/SSR reads) on top of the RPC's hard gate, not the gate. A locked façade
+  // (no `unlocked` / password box) carries no list.
+  const guests =
+    guestToken && event.unlocked === true ? await readGuestList(slug, guestToken) : [];
+
+  return NextResponse.json(
+    { event, guests },
+    { headers: { "Cache-Control": "no-store" } },
+  );
 }
