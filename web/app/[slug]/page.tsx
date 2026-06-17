@@ -5,6 +5,8 @@ import { notFound } from "next/navigation";
 import { EventClient } from "./event-client";
 import { PasswordGate } from "./password-gate";
 import type { CommentEntry } from "@/lib/events/comments";
+import type { DatePoll } from "@/lib/events/date-poll";
+import { readDatePoll } from "@/lib/events/read-date-poll";
 import {
   credentialSecret,
   passwordCookieName,
@@ -73,6 +75,7 @@ export default async function PublicEventPage({
   // row to its owner (host_id = auth.uid()), so a returned row IS proof of ownership,
   // and the host may always comment. Skipped behind a password box (nothing to show).
   let initialComments: CommentEntry[] = [];
+  let initialPoll: DatePoll | null = null;
   let viewerIsHost = false;
   if (!event.locked) {
     const supabase = await createClient();
@@ -88,6 +91,11 @@ export default async function PublicEventPage({
       viewerIsHost = owned != null;
     }
     initialComments = await readComments(slug);
+    // Date poll (task 5.1): seed the read-open tally for a still-TBD event. No token at
+    // SSR (it's client-only), so the guest's own selection resolves client-side on the
+    // first token-bearing poll. Through the trusted role — a private event resolves only
+    // here. Skipped for a fixed-date event (no live poll).
+    if (event.date_tbd === true) initialPoll = await readDatePoll(slug);
   }
 
   return (
@@ -104,6 +112,7 @@ export default async function PublicEventPage({
           slug={slug}
           initialEvent={event}
           initialComments={initialComments}
+          initialPoll={initialPoll}
           viewerIsHost={viewerIsHost}
         />
       )}

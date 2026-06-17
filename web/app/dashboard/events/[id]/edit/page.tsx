@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
+import { DatePollManager, type DatePollOptionView } from "@/components/events/date-poll-manager";
+import { parseDatePoll } from "@/lib/events/date-poll";
 import { themeColorFromJson } from "@/lib/events/theme";
 import { createClient } from "@/lib/supabase/server";
 
@@ -37,6 +39,15 @@ export default async function EditEventPage({
     .maybeSingle();
 
   if (!event) notFound();
+
+  // Date poll (task 5.1): read the candidate dates + live tally through the host's own
+  // session. get_date_poll's private gate is owner-aware, so the host reads their own
+  // event's poll (public or private) on the single read path — no direct table read.
+  const { data: pollData } = await supabase.rpc("get_date_poll", { slug: event.slug });
+  const poll = parseDatePoll(pollData);
+  const pollOptions: DatePollOptionView[] = poll?.options ?? [];
+  // Show the manager when a date is still being decided, or there are candidates to tidy.
+  const showPoll = event.date_tbd || pollOptions.length > 0;
 
   const defaults: EventDefaults = {
     id: event.id,
@@ -86,6 +97,12 @@ export default async function EditEventPage({
         <p className="text-sm text-muted">Public link</p>
         <code className="mt-1 block break-all font-mono text-sm text-iris">/{event.slug}</code>
       </div>
+
+      {showPoll && (
+        <div className="mt-8">
+          <DatePollManager eventId={event.id} dateTbd={event.date_tbd} options={pollOptions} />
+        </div>
+      )}
 
       <div className="mt-10">
         <EventForm mode="edit" defaults={defaults} />

@@ -687,12 +687,20 @@ export type Database = {
         }
         Returns: Json
       }
+      add_date_option: {
+        Args: { ends_at?: string; event_id: string; starts_at: string }
+        Returns: Json
+      }
       finalize_date: {
         Args: { event_id: string; option_id: string }
         Returns: Json
       }
       generate_event_slug: { Args: { title: string }; Returns: string }
       get_comments: {
+        Args: { guest_token?: string; slug: string }
+        Returns: Json
+      }
+      get_date_poll: {
         Args: { guest_token?: string; slug: string }
         Returns: Json
       }
@@ -716,6 +724,7 @@ export type Database = {
         Returns: Record<string, unknown>
       }
       promote_guest: { Args: { rsvp_id: string }; Returns: Json }
+      remove_date_option: { Args: { option_id: string }; Returns: Json }
       set_event_password: {
         Args: { event_id: string; password: string }
         Returns: undefined

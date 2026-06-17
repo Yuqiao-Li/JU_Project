@@ -4,9 +4,11 @@ import { useCallback, useEffect, useState } from "react";
 
 import { EventView } from "./event-view";
 import { CommentsFeed } from "@/components/events/comments-feed";
+import { DatePoll } from "@/components/events/date-poll";
 import { GuestList } from "@/components/events/guest-list";
 import { RsvpForm } from "@/components/events/rsvp-form";
 import type { CommentEntry } from "@/lib/events/comments";
+import { parseDatePoll, pollIsActive, type DatePoll as DatePollData } from "@/lib/events/date-poll";
 import { parseGuestList, type GuestListEntry } from "@/lib/events/guest-list";
 import {
   loadRsvpRecord,
@@ -48,32 +50,39 @@ const POLL_INTERVAL_MS = 15_000;
 interface EventSnapshot {
   event: EventViewData;
   guests: GuestListEntry[];
+  poll: DatePollData | null;
 }
 
 export function EventClient({
   slug,
   initialEvent,
   initialComments,
+  initialPoll,
   viewerIsHost,
 }: {
   slug: string;
   initialEvent: EventViewData;
   /** SSR-fetched comment feed (read-open, task 4.1); the feed re-polls client-side. */
   initialComments: CommentEntry[];
+  /** SSR-fetched date poll (read-open tally, task 5.1); null when there's no live poll. */
+  initialPoll: DatePollData | null;
   /** True when the logged-in viewer owns this event (host may always comment). */
   viewerIsHost: boolean;
 }) {
   const [event, setEvent] = useState<EventViewData>(initialEvent);
   const [guests, setGuests] = useState<GuestListEntry[]>([]);
+  const [poll, setPoll] = useState<DatePollData | null>(initialPoll);
   const [record, setRecord] = useState<RsvpRecord | null>(null);
   const token = record?.token ?? null;
 
   // Apply a fresh re-read. A null snapshot (failed / locked) is IGNORED so a transient
-  // error or a re-locked read never clobbers an already-unlocked view.
+  // error or a re-locked read never clobbers an already-unlocked view. The poll is only
+  // updated when the re-read actually carried one (a fixed-date event returns none).
   const applySnapshot = useCallback((snap: EventSnapshot | null) => {
     if (!snap) return;
     setEvent(snap.event);
     setGuests(snap.guests);
+    if (snap.poll) setPoll(snap.poll);
   }, []);
 
   // localStorage is client-only, so the cached RSVP (and thus the unlocked re-read) can
@@ -157,6 +166,18 @@ export function EventClient({
           onSubmitted={handleSubmitted}
         />
       }
+      pollSlot={
+        pollIsActive(poll) ? (
+          <DatePoll
+            slug={slug}
+            poll={poll}
+            token={token}
+            unlocked={event.unlocked === true}
+            accent={accent}
+            onVoted={setPoll}
+          />
+        ) : null
+      }
       guestListSlot={
         <GuestList
           guests={guests}
@@ -199,7 +220,11 @@ async function fetchSnapshot(slug: string, token: string): Promise<EventSnapshot
     const obj = data && typeof data === "object" ? (data as Record<string, unknown>) : null;
     const parsed = eventViewSchema.safeParse(obj?.event);
     if (!parsed.success || parsed.data.locked) return null;
-    return { event: parsed.data, guests: parseGuestList(obj?.guests) };
+    return {
+      event: parsed.data,
+      guests: parseGuestList(obj?.guests),
+      poll: parseDatePoll(obj?.poll),
+    };
   } catch {
     return null;
   }

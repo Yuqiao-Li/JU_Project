@@ -43,13 +43,19 @@ export function PasswordGate({
   const [error, setError] = useState<string | null>(null);
   const [unlocked, setUnlocked] = useState<EventViewData | null>(null);
 
-  // Past the gate, the Activity Feed seeds itself (it polls get_comments on mount —
-  // read-open), so we hand EventClient an empty initial feed. A host viewing their own
-  // password link is the rare case; they manage from the dashboard, so viewerIsHost is
-  // false here and the composer follows the guest unlock rules.
+  // Past the gate, the Activity Feed AND the date poll seed themselves (both poll their
+  // read-open RPC on mount), so we hand EventClient an empty initial feed and a null
+  // poll. A host viewing their own password link is the rare case; they manage from the
+  // dashboard, so viewerIsHost is false here and the composer follows the guest rules.
   if (unlocked) {
     return (
-      <EventClient slug={slug} initialEvent={unlocked} initialComments={[]} viewerIsHost={false} />
+      <EventClient
+        slug={slug}
+        initialEvent={unlocked}
+        initialComments={[]}
+        initialPoll={null}
+        viewerIsHost={false}
+      />
     );
   }
 

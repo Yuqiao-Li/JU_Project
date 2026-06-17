@@ -5,6 +5,7 @@ import {
   passwordCookieName,
   verifyPasswordCredential,
 } from "@/lib/events/password-credential";
+import { readDatePoll } from "@/lib/events/read-date-poll";
 import { readEventBySlug } from "@/lib/events/read-event";
 import { readGuestList } from "@/lib/events/read-guest-list";
 import { ipFromHeaders } from "@/lib/ratelimit/ip";
@@ -70,8 +71,13 @@ export async function GET(
   const guests =
     guestToken && event.unlocked === true ? await readGuestList(slug, guestToken) : [];
 
+  // Date poll (task 5.1) rides the same tiered funnel so the client polls ONE endpoint.
+  // Only fetched for a TBD event (the poll is meaningless once a date is fixed), through
+  // the trusted role — get_date_poll re-applies the private + unlock gates itself.
+  const poll = event.date_tbd === true ? await readDatePoll(slug, guestToken) : null;
+
   return NextResponse.json(
-    { event, guests },
+    { event, guests, poll },
     { headers: { "Cache-Control": "no-store" } },
   );
 }

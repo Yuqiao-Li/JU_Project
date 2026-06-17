@@ -25,12 +25,19 @@ import type { EventView } from "@/lib/events/view";
 export function EventView({
   event,
   rsvpSlot,
+  pollSlot,
   guestListSlot,
   commentsSlot,
 }: {
   event: EventView;
   /** The RSVP interaction (client), slotted in by `EventClient`. */
   rsvpSlot?: React.ReactNode;
+  /**
+   * The date poll (client), slotted in by `EventClient` (task 5.1). Read-open (the
+   * tally shows for any viewer), voting gated inside the slot (and in the DB). Renders
+   * only while the date is still being decided — null once finalized / not a poll.
+   */
+  pollSlot?: React.ReactNode;
   /**
    * The "who's coming" list (client), slotted in by `EventClient` (task 3.1). It is
    * second-tier: it only renders for an unlocked viewer and only the data the RPC
@@ -86,6 +93,10 @@ export function EventView({
 
       {/* ── Add to calendar (first tier; no date ⇒ renders nothing) ───────────── */}
       <AddToCalendar event={event} />
+
+      {/* ── Date poll (read-open tally; voting gated inside, task 5.1) ──────────
+          Renders only while the date is being decided; null once the host finalizes. */}
+      {pollSlot}
 
       {/* ── Where ────────────────────────────────────────────────────────────── */}
       <Section title="Where">

@@ -33,3 +33,16 @@ export function formatEventDay(startsAt: string | null, dateTbd: boolean): strin
   if (Number.isNaN(ms)) return "Date TBD";
   return DAY_FMT.format(new Date(ms));
 }
+
+const END_TIME_FMT = new Intl.DateTimeFormat("en-US", { hour: "numeric", minute: "2-digit" });
+
+/** A single date-poll option label: "Sat, Jan 1, 6:00 PM" (+ " – 9:00 PM" when ended). */
+export function formatOptionWhen(startsAt: string, endsAt: string | null): string {
+  const start = Date.parse(startsAt);
+  if (Number.isNaN(start)) return "Date TBD";
+  const base = WHEN_FMT.format(new Date(start));
+  if (!endsAt) return base;
+  const end = Date.parse(endsAt);
+  if (Number.isNaN(end)) return base;
+  return `${base} – ${END_TIME_FMT.format(new Date(end))}`;
+}
