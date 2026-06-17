@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 
 import { EventClient } from "./event-client";
 import { PasswordGate } from "./password-gate";
@@ -73,6 +74,7 @@ export default async function PublicEventPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
+  const t = await getTranslations("eventPage");
 
   // A returning guest of a password event carries the slug-scoped credential cookie
   // minted at unlock. Validate the cheap MAC; a valid one lets this SSR render skip the
@@ -146,7 +148,7 @@ export default async function PublicEventPage({
           href="/"
           className="font-display text-sm font-bold tracking-tight text-muted transition hover:text-paper"
         >
-          made with partiful<span className="text-coral">*</span>
+          {t("madeWith")} partiful<span className="text-coral">*</span>
         </Link>
       </footer>
     </div>

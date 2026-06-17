@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
+import { useTranslations } from "next-intl";
 
 import { promoteGuest, type PromoteState } from "./actions";
 
@@ -14,6 +15,7 @@ import { promoteGuest, type PromoteState } from "./actions";
 const INITIAL: PromoteState = { status: "idle" };
 
 export function PromoteButton({ rsvpId, eventId }: { rsvpId: string; eventId: string }) {
+  const t = useTranslations("hostEvent");
   const [state, formAction, pending] = useActionState(promoteGuest, INITIAL);
 
   return (
@@ -26,7 +28,7 @@ export function PromoteButton({ rsvpId, eventId }: { rsvpId: string; eventId: st
         aria-busy={pending}
         className="inline-flex h-9 items-center justify-center rounded-lg border border-line px-3 text-sm font-semibold text-paper transition hover:bg-surface-2 disabled:opacity-60"
       >
-        {pending ? "Moving…" : "Move to going"}
+        {pending ? t("moving") : t("moveToGoing")}
       </button>
       {state.status === "error" && state.message && (
         <p role="alert" className="text-xs text-coral">

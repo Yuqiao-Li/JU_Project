@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 
 import { CopyLinkButton } from "@/components/events/copy-link-button";
 import { goingOccupancy, remainingSpots } from "@/lib/events/capacity";
@@ -26,15 +27,18 @@ type RsvpRow = {
   guests: GuestEmbed;
 };
 
-const STATUS_LABELS: Record<string, string> = {
-  going: "Going",
-  maybe: "Maybe",
-  not_going: "Can’t go",
-  waitlisted: "Waitlist",
+type Translator = Awaited<ReturnType<typeof getTranslations>>;
+
+const STATUS_LABEL_KEYS: Record<string, string> = {
+  going: "statusGoing",
+  maybe: "statusMaybe",
+  not_going: "statusNotGoing",
+  waitlisted: "statusWaitlisted",
 };
 
 export default async function HostEventDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+  const t = await getTranslations("hostEvent");
 
   const supabase = await createClient();
   const {
@@ -71,16 +75,16 @@ export default async function HostEventDetailPage({ params }: { params: Promise<
   return (
     <div className="mx-auto w-full max-w-2xl flex-1 px-5 py-12 sm:px-8">
       <Link href="/dashboard" className="text-sm text-muted transition hover:text-paper">
-        ← Your events
+        {t("backToEvents")}
       </Link>
 
       <div className="mt-6 flex items-center gap-3">
-        <p className="eyebrow">Your event</p>
+        <p className="eyebrow">{t("eyebrow")}</p>
         <span className="rounded-full border border-line px-2.5 py-0.5 text-xs capitalize text-muted">
           {event.status}
         </span>
         {event.visibility === "private" && (
-          <span className="rounded-full border border-line px-2.5 py-0.5 text-xs text-muted">Private</span>
+          <span className="rounded-full border border-line px-2.5 py-0.5 text-xs text-muted">{t("private")}</span>
         )}
       </div>
       <h1 className="mt-2 text-balance font-display text-3xl font-extrabold text-paper">{event.title}</h1>
@@ -91,58 +95,51 @@ export default async function HostEventDetailPage({ params }: { params: Promise<
           href={`/dashboard/events/${event.id}/edit`}
           className="inline-flex h-10 items-center justify-center rounded-lg border border-line px-4 text-sm font-semibold text-paper transition hover:bg-surface-2"
         >
-          Edit event
+          {t("editEvent")}
         </Link>
       </div>
 
       <section className="mt-8 rounded-2xl border border-line bg-surface/60 p-5">
-        <p className="text-sm text-muted">Public link — guests RSVP without an account.</p>
+        <p className="text-sm text-muted">{t("publicLinkHint")}</p>
         <div className="mt-3">
           <CopyLinkButton slug={event.slug} />
         </div>
       </section>
 
       <section className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3">
-        <Stat label="Going" value={String(goingCount)} accent />
-        <Stat label="Maybe" value={String(maybe.length)} />
+        <Stat label={t("statGoing")} value={String(goingCount)} accent />
+        <Stat label={t("statMaybe")} value={String(maybe.length)} />
         <Stat
-          label={event.capacity != null ? "Spots left" : "Capacity"}
-          value={event.capacity == null ? "No limit" : isFull ? "Full" : String(remaining)}
+          label={event.capacity != null ? t("statSpotsLeft") : t("statCapacity")}
+          value={event.capacity == null ? t("noLimit") : isFull ? t("full") : String(remaining)}
         />
       </section>
 
-      {isFull && (
-        <p className="mt-3 text-sm text-muted">
-          This event is full — new replies join the waitlist. Promote a waitlisted guest below to open
-          their spot.
-        </p>
-      )}
+      {isFull && <p className="mt-3 text-sm text-muted">{t("fullNotice")}</p>}
 
       <section className="mt-10">
-        <h2 className="eyebrow">Guest list</h2>
+        <h2 className="eyebrow">{t("guestList")}</h2>
         {going.length + maybe.length + declined.length === 0 ? (
-          <p className="mt-3 text-sm text-muted">No replies yet. Share the link to get the first RSVP.</p>
+          <p className="mt-3 text-sm text-muted">{t("noReplies")}</p>
         ) : (
           <div className="mt-4 space-y-6">
-            <GuestGroup status="going" rows={going} />
-            <GuestGroup status="maybe" rows={maybe} />
-            <GuestGroup status="not_going" rows={declined} />
+            <GuestGroup status="going" rows={going} t={t} />
+            <GuestGroup status="maybe" rows={maybe} t={t} />
+            <GuestGroup status="not_going" rows={declined} t={t} />
           </div>
         )}
       </section>
 
       {waitlist.length > 0 && (
         <section className="mt-10">
-          <h2 className="eyebrow">Waitlist · {waitlist.length}</h2>
-          <p className="mt-1 text-sm text-muted">
-            In line if a spot opens. Move someone up when there’s room.
-          </p>
+          <h2 className="eyebrow">{t("waitlistHeading", { count: waitlist.length })}</h2>
+          <p className="mt-1 text-sm text-muted">{t("waitlistHint")}</p>
           <ul className="mt-4 divide-y divide-line/60 rounded-xl border border-line bg-surface/40">
             {waitlist.map((r) => (
               <li key={r.id} className="flex items-center justify-between gap-3 px-4 py-3">
                 <div className="min-w-0">
                   <p className="truncate text-paper">
-                    {r.guests?.display_name ?? "Guest"}
+                    {r.guests?.display_name ?? t("guestFallback")}
                     {r.plus_ones > 0 && <span className="ml-1 text-sm text-muted">+{r.plus_ones}</span>}
                   </p>
                   {r.guests?.contact && <p className="truncate text-sm text-muted">{r.guests.contact}</p>}
@@ -169,18 +166,22 @@ function Stat({ label, value, accent = false }: { label: string; value: string; 
 function GuestGroup({
   status,
   rows,
+  t,
   hideHeading = false,
 }: {
   status: string;
   rows: RsvpRow[];
+  t: Translator;
   hideHeading?: boolean;
 }) {
   if (rows.length === 0) return null;
+  const labelKey = STATUS_LABEL_KEYS[status];
+  const label = labelKey ? t(labelKey) : status;
   return (
     <div>
       {!hideHeading && (
         <p className="text-sm font-semibold text-muted">
-          {STATUS_LABELS[status] ?? status} · {rows.length}
+          {label} · {rows.length}
         </p>
       )}
       <ul className="mt-2 divide-y divide-line/60 rounded-xl border border-line bg-surface/40">
@@ -188,7 +189,7 @@ function GuestGroup({
           <li key={r.id} className="flex items-center justify-between gap-3 px-4 py-3">
             <div className="min-w-0">
               <p className="truncate text-paper">
-                {r.guests?.display_name ?? "Guest"}
+                {r.guests?.display_name ?? t("guestFallback")}
                 {r.plus_ones > 0 && <span className="ml-1 text-sm text-muted">+{r.plus_ones}</span>}
               </p>
               {r.guests?.contact && <p className="truncate text-sm text-muted">{r.guests.contact}</p>}

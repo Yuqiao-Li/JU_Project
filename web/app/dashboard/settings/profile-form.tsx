@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useActionState, useEffect, useState } from "react";
 
 import { validateUsername } from "@/lib/profile/username";
@@ -23,6 +24,7 @@ export function ProfileForm({
   initialDisplayName: string;
   initialUsername: string;
 }) {
+  const t = useTranslations("settings");
   const [state, formAction, pending] = useActionState(updateProfile, INITIAL);
   const [username, setUsername] = useState(initialUsername);
   // Set only from the async availability fetch, keyed to the input it answered.
@@ -61,18 +63,18 @@ export function ProfileForm({
   // Derive the hint during render — no synchronous setState involved.
   let hint: { kind: HintKind; text: string };
   if (unchanged) {
-    hint = { kind: "default", text: "Lowercase letters, numbers, hyphens, underscores." };
+    hint = { kind: "default", text: t("usernameHintDefault") };
   } else if (!local.ok) {
     hint = { kind: "invalid", text: local.error };
   } else if (remote && remote.for === trimmed) {
     hint =
       remote.kind === "available"
-        ? { kind: "available", text: "Looks open — claim it." }
+        ? { kind: "available", text: t("usernameAvailable") }
         : remote.kind === "taken"
-          ? { kind: "taken", text: "That one's taken." }
-          : { kind: "unknown", text: "We'll confirm when you save." };
+          ? { kind: "taken", text: t("usernameTaken") }
+          : { kind: "unknown", text: t("usernameUnknown") };
   } else {
-    hint = { kind: "checking", text: "Checking availability…" };
+    hint = { kind: "checking", text: t("usernameChecking") };
   }
 
   const hintColor =
@@ -86,7 +88,7 @@ export function ProfileForm({
     <form action={formAction} className="flex flex-col gap-6">
       <div className="flex flex-col gap-2">
         <label htmlFor="display_name" className="eyebrow">
-          Name
+          {t("nameLabel")}
         </label>
         <input
           id="display_name"
@@ -95,14 +97,14 @@ export function ProfileForm({
           required
           defaultValue={initialDisplayName}
           maxLength={80}
-          placeholder="Rain"
+          placeholder={t("namePlaceholder")}
           className="h-12 rounded-xl border border-line bg-surface-2 px-4 text-paper placeholder:text-muted/60 focus:border-iris focus:outline-none"
         />
       </div>
 
       <div className="flex flex-col gap-2">
         <label htmlFor="username" className="eyebrow">
-          Username
+          {t("usernameLabel")}
         </label>
         <div className="flex items-center rounded-xl border border-line bg-surface-2 focus-within:border-iris">
           <span className="pl-4 font-mono text-sm text-muted">/u/</span>
@@ -116,7 +118,7 @@ export function ProfileForm({
             autoCorrect="off"
             spellCheck={false}
             maxLength={30}
-            placeholder="rain"
+            placeholder={t("usernamePlaceholder")}
             className="h-12 flex-1 bg-transparent pl-1 pr-4 text-paper placeholder:text-muted/60 focus:outline-none"
           />
         </div>
@@ -129,7 +131,7 @@ export function ProfileForm({
           disabled={pending}
           className="h-12 rounded-xl bg-coral px-6 font-semibold text-ink transition hover:brightness-105 disabled:opacity-60"
         >
-          {pending ? "Saving…" : "Save profile"}
+          {pending ? t("saving") : t("save")}
         </button>
         {state.status === "success" && (
           <span role="status" className="text-sm text-iris">

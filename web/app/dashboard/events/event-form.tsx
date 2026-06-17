@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useActionState, useState } from "react";
 
 import { CoverUploader } from "@/components/events/cover-uploader";
@@ -80,6 +81,7 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
  * input only ever carries a new plaintext, hashed server-side.
  */
 export function EventForm({ mode, defaults }: { mode: "create" | "edit"; defaults?: EventDefaults }) {
+  const t = useTranslations("eventForm");
   const d = defaults ?? BLANK;
   const action = mode === "create" ? createEvent : updateEvent;
   const [state, formAction, pending] = useActionState(action, INITIAL);
@@ -90,8 +92,12 @@ export function EventForm({ mode, defaults }: { mode: "create" | "edit"; default
   const [themeColor, setThemeColor] = useState<ThemeKey>(d.themeColor);
 
   const publishLabel =
-    mode === "create" ? "Publish event" : d.status === "published" ? "Save changes" : "Publish";
-  const draftLabel = mode === "create" ? "Save as draft" : "Move to draft";
+    mode === "create"
+      ? t("publishEvent")
+      : d.status === "published"
+        ? t("saveChanges")
+        : t("publish");
+  const draftLabel = mode === "create" ? t("saveAsDraft") : t("moveToDraft");
 
   return (
     <form action={formAction} className="flex flex-col gap-10">
@@ -99,10 +105,10 @@ export function EventForm({ mode, defaults }: { mode: "create" | "edit"; default
 
       {/* The basics */}
       <section className="flex flex-col gap-5">
-        <SectionLabel>The basics</SectionLabel>
+        <SectionLabel>{t("sectionBasics")}</SectionLabel>
         <div className="flex flex-col gap-2">
           <label htmlFor="title" className="text-sm text-muted">
-            Event name
+            {t("eventNameLabel")}
           </label>
           <input
             id="title"
@@ -111,13 +117,13 @@ export function EventForm({ mode, defaults }: { mode: "create" | "edit"; default
             required
             maxLength={120}
             defaultValue={d.title}
-            placeholder="Rooftop birthday"
+            placeholder={t("eventNamePlaceholder")}
             className={inputClass}
           />
         </div>
         <div className="flex flex-col gap-2">
           <label htmlFor="description" className="text-sm text-muted">
-            What&apos;s the plan?
+            {t("descriptionLabel")}
           </label>
           <textarea
             id="description"
@@ -125,7 +131,7 @@ export function EventForm({ mode, defaults }: { mode: "create" | "edit"; default
             rows={4}
             maxLength={4000}
             defaultValue={d.description}
-            placeholder="Drinks, a playlist, and a view. Come through."
+            placeholder={t("descriptionPlaceholder")}
             className="w-full rounded-xl border border-line bg-surface-2 px-4 py-3 text-paper placeholder:text-muted/60 focus:border-iris focus:outline-none"
           />
         </div>
@@ -133,11 +139,11 @@ export function EventForm({ mode, defaults }: { mode: "create" | "edit"; default
 
       {/* Look — cover, theme color, effect */}
       <section className="flex flex-col gap-5">
-        <SectionLabel>Look</SectionLabel>
+        <SectionLabel>{t("sectionLook")}</SectionLabel>
         <CoverUploader eventId={mode === "edit" ? d.id : null} initialUrl={d.coverImageUrl} />
 
         <div className="flex flex-col gap-2">
-          <span className="text-sm text-muted">Theme color</span>
+          <span className="text-sm text-muted">{t("themeColorLabel")}</span>
           <div className="flex flex-wrap gap-3">
             {THEME_SWATCHES.map((s) => (
               <label key={s.key} className="cursor-pointer">
@@ -163,7 +169,7 @@ export function EventForm({ mode, defaults }: { mode: "create" | "edit"; default
 
         <div className="flex flex-col gap-2">
           <label htmlFor="effect" className="text-sm text-muted">
-            Effect <span className="text-muted/60">— a little flourish, kept subtle</span>
+            {t("effectLabel")} <span className="text-muted/60">{t("effectHint")}</span>
           </label>
           <select id="effect" name="effect" defaultValue={d.effect || "none"} className={inputClass}>
             {EFFECT_PRESETS.map((e) => (
@@ -177,7 +183,7 @@ export function EventForm({ mode, defaults }: { mode: "create" | "edit"; default
 
       {/* When */}
       <section className="flex flex-col gap-5">
-        <SectionLabel>When</SectionLabel>
+        <SectionLabel>{t("sectionWhen")}</SectionLabel>
         <label className="flex items-center gap-3 text-paper">
           <input
             type="checkbox"
@@ -186,12 +192,12 @@ export function EventForm({ mode, defaults }: { mode: "create" | "edit"; default
             onChange={(e) => setDateTbd(e.target.checked)}
             className="size-4 accent-coral"
           />
-          Date to be decided
+          {t("dateTbd")}
         </label>
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="flex flex-col gap-2">
             <label htmlFor="starts_at" className="text-sm text-muted">
-              Starts
+              {t("startsLabel")}
             </label>
             <input
               id="starts_at"
@@ -204,7 +210,7 @@ export function EventForm({ mode, defaults }: { mode: "create" | "edit"; default
           </div>
           <div className="flex flex-col gap-2">
             <label htmlFor="ends_at" className="text-sm text-muted">
-              Ends <span className="text-muted/60">(optional)</span>
+              {t("endsLabel")} <span className="text-muted/60">{t("optional")}</span>
             </label>
             <input
               id="ends_at"
@@ -220,10 +226,10 @@ export function EventForm({ mode, defaults }: { mode: "create" | "edit"; default
 
       {/* Where */}
       <section className="flex flex-col gap-5">
-        <SectionLabel>Where</SectionLabel>
+        <SectionLabel>{t("sectionWhere")}</SectionLabel>
         <div className="flex flex-col gap-2">
           <label htmlFor="location_city" className="text-sm text-muted">
-            City <span className="text-muted/60">— shown before anyone RSVPs</span>
+            {t("cityLabel")} <span className="text-muted/60">{t("cityHint")}</span>
           </label>
           <input
             id="location_city"
@@ -231,13 +237,13 @@ export function EventForm({ mode, defaults }: { mode: "create" | "edit"; default
             type="text"
             maxLength={120}
             defaultValue={d.locationCity}
-            placeholder="Brooklyn, NY"
+            placeholder={t("cityPlaceholder")}
             className={inputClass}
           />
         </div>
         <div className="flex flex-col gap-2">
           <label htmlFor="location_text" className="text-sm text-muted">
-            Full address <span className="text-muted/60">— revealed only after RSVP</span>
+            {t("addressLabel")} <span className="text-muted/60">{t("addressHint")}</span>
           </label>
           <input
             id="location_text"
@@ -245,13 +251,13 @@ export function EventForm({ mode, defaults }: { mode: "create" | "edit"; default
             type="text"
             maxLength={500}
             defaultValue={d.locationText}
-            placeholder="123 Rooftop Ave, Apt 5"
+            placeholder={t("addressPlaceholder")}
             className={inputClass}
           />
         </div>
         <div className="flex flex-col gap-2">
           <label htmlFor="location_url" className="text-sm text-muted">
-            Map or venue link <span className="text-muted/60">(optional)</span>
+            {t("mapLinkLabel")} <span className="text-muted/60">{t("optional")}</span>
           </label>
           <input
             id="location_url"
@@ -267,11 +273,11 @@ export function EventForm({ mode, defaults }: { mode: "create" | "edit"; default
 
       {/* Who can come */}
       <section className="flex flex-col gap-5">
-        <SectionLabel>Who can come</SectionLabel>
+        <SectionLabel>{t("sectionWhoCanCome")}</SectionLabel>
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="flex flex-col gap-2">
             <label htmlFor="capacity" className="text-sm text-muted">
-              Capacity <span className="text-muted/60">(optional)</span>
+              {t("capacityLabel")} <span className="text-muted/60">{t("optional")}</span>
             </label>
             <input
               id="capacity"
@@ -280,14 +286,14 @@ export function EventForm({ mode, defaults }: { mode: "create" | "edit"; default
               min={1}
               step={1}
               defaultValue={d.capacity ?? ""}
-              placeholder="No limit"
+              placeholder={t("capacityPlaceholder")}
               className={inputClass}
             />
           </div>
           {allowPlusOnes && (
             <div className="flex flex-col gap-2">
               <label htmlFor="max_plus_ones" className="text-sm text-muted">
-                Plus-ones per guest
+                {t("plusOnesPerGuest")}
               </label>
               <input
                 id="max_plus_ones"
@@ -309,23 +315,21 @@ export function EventForm({ mode, defaults }: { mode: "create" | "edit"; default
             onChange={(e) => setAllowPlusOnes(e.target.checked)}
             className="size-4 accent-coral"
           />
-          Let guests bring a plus-one
+          {t("allowPlusOnes")}
         </label>
         <label className="flex items-center gap-3 text-paper">
           <input type="checkbox" name="rsvp_enabled" defaultChecked={d.rsvpEnabled} className="size-4 accent-coral" />
-          Collect RSVPs <span className="text-sm text-muted">— turn off to just share the details</span>
+          {t("collectRsvps")} <span className="text-sm text-muted">{t("collectRsvpsHint")}</span>
         </label>
       </section>
 
       {/* Chip in — display-only payment link */}
       <section className="flex flex-col gap-5">
-        <SectionLabel>Chip in</SectionLabel>
-        <p className="text-sm text-muted">
-          Splitting the cost? Drop a payment link — guests see it on the page. We don&apos;t handle the money.
-        </p>
+        <SectionLabel>{t("sectionChipIn")}</SectionLabel>
+        <p className="text-sm text-muted">{t("chipInBlurb")}</p>
         <div className="flex flex-col gap-2">
           <label htmlFor="chip_in_url" className="text-sm text-muted">
-            Payment link <span className="text-muted/60">(optional)</span>
+            {t("paymentLinkLabel")} <span className="text-muted/60">{t("optional")}</span>
           </label>
           <input
             id="chip_in_url"
@@ -339,7 +343,7 @@ export function EventForm({ mode, defaults }: { mode: "create" | "edit"; default
         </div>
         <div className="flex flex-col gap-2">
           <label htmlFor="chip_in_note" className="text-sm text-muted">
-            What it&apos;s for <span className="text-muted/60">(optional)</span>
+            {t("chipInNoteLabel")} <span className="text-muted/60">{t("optional")}</span>
           </label>
           <input
             id="chip_in_note"
@@ -347,7 +351,7 @@ export function EventForm({ mode, defaults }: { mode: "create" | "edit"; default
             type="text"
             maxLength={280}
             defaultValue={d.chipInNote}
-            placeholder="$10 covers drinks and snacks"
+            placeholder={t("chipInNotePlaceholder")}
             className={inputClass}
           />
         </div>
@@ -355,9 +359,9 @@ export function EventForm({ mode, defaults }: { mode: "create" | "edit"; default
 
       {/* Privacy */}
       <section className="flex flex-col gap-5">
-        <SectionLabel>Privacy</SectionLabel>
+        <SectionLabel>{t("sectionPrivacy")}</SectionLabel>
         <fieldset className="flex flex-col gap-3">
-          <legend className="text-sm text-muted">Who can find this event</legend>
+          <legend className="text-sm text-muted">{t("whoCanFind")}</legend>
           <label className="flex items-start gap-3 text-paper">
             <input
               type="radio"
@@ -367,8 +371,8 @@ export function EventForm({ mode, defaults }: { mode: "create" | "edit"; default
               className="mt-1 size-4 accent-coral"
             />
             <span>
-              Public
-              <span className="block text-sm text-muted">Anyone with the link can see it and RSVP.</span>
+              {t("visibilityPublic")}
+              <span className="block text-sm text-muted">{t("visibilityPublicHint")}</span>
             </span>
           </label>
           <label className="flex items-start gap-3 text-paper">
@@ -380,8 +384,8 @@ export function EventForm({ mode, defaults }: { mode: "create" | "edit"; default
               className="mt-1 size-4 accent-coral"
             />
             <span>
-              Private
-              <span className="block text-sm text-muted">Only people you send the link to. Never publicly listed.</span>
+              {t("visibilityPrivate")}
+              <span className="block text-sm text-muted">{t("visibilityPrivateHint")}</span>
             </span>
           </label>
         </fieldset>
@@ -395,13 +399,13 @@ export function EventForm({ mode, defaults }: { mode: "create" | "edit"; default
               onChange={(e) => setClearPassword(e.target.checked)}
               className="size-4 accent-coral"
             />
-            Remove the current password
+            {t("removePassword")}
           </label>
         )}
         <div className="flex flex-col gap-2">
           <label htmlFor="password" className="text-sm text-muted">
-            {d.hasPassword ? "Set a new password" : "Add a password"}{" "}
-            <span className="text-muted/60">{d.hasPassword ? "(leave blank to keep current)" : "(optional)"}</span>
+            {d.hasPassword ? t("setNewPassword") : t("addPassword")}{" "}
+            <span className="text-muted/60">{d.hasPassword ? t("passwordKeepHint") : t("optional")}</span>
           </label>
           <input
             id="password"
@@ -410,10 +414,10 @@ export function EventForm({ mode, defaults }: { mode: "create" | "edit"; default
             autoComplete="new-password"
             maxLength={128}
             disabled={clearPassword}
-            placeholder={d.hasPassword ? "••••••••" : "Guests type this to see the details"}
+            placeholder={d.hasPassword ? "••••••••" : t("passwordPlaceholder")}
             className={inputClass}
           />
-          {d.hasPassword && <p className="text-xs text-muted">This event is password protected.</p>}
+          {d.hasPassword && <p className="text-xs text-muted">{t("passwordProtected")}</p>}
         </div>
       </section>
 
@@ -425,7 +429,7 @@ export function EventForm({ mode, defaults }: { mode: "create" | "edit"; default
           disabled={pending}
           className="h-12 rounded-xl bg-coral px-6 font-semibold text-ink transition hover:brightness-105 disabled:opacity-60"
         >
-          {pending ? "Saving…" : publishLabel}
+          {pending ? t("saving") : publishLabel}
         </button>
         <button
           type="submit"

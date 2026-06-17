@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 
 import { Wordmark } from "@/components/brand/wordmark";
 
@@ -12,7 +13,9 @@ import { Wordmark } from "@/components/brand/wordmark";
  * "an empty screen is an invitation to act"). The aurora is the page's single flourish,
  * reused from the front door; reduced-motion stills it (globals.css).
  */
-export default function NotFound() {
+export default async function NotFound() {
+  const t = await getTranslations("errors");
+
   return (
     <main className="relative flex flex-1 items-center justify-center overflow-hidden px-5 py-20">
       <div
@@ -21,20 +24,19 @@ export default function NotFound() {
       />
       <div className="relative w-full max-w-md text-center">
         <Wordmark href="/" className="text-2xl" />
-        <p className="eyebrow mt-10">404</p>
+        <p className="eyebrow mt-10">{t("notFound.eyebrow")}</p>
         <h1 className="mt-3 text-balance font-display text-3xl font-extrabold leading-tight text-paper sm:text-4xl">
-          We couldn&rsquo;t find that.
+          {t("notFound.title")}
         </h1>
         <p className="mx-auto mt-4 max-w-sm text-balance text-muted">
-          The link might be mistyped, or the host took the event down. Double-check the link, or
-          head back to the start.
+          {t("notFound.body")}
         </p>
         <div className="mt-8 flex items-center justify-center">
           <Link
             href="/"
             className="inline-flex h-12 items-center justify-center rounded-xl bg-coral px-7 font-semibold text-ink transition hover:brightness-105"
           >
-            Take me home
+            {t("notFound.cta")}
           </Link>
         </div>
       </div>

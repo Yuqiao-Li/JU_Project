@@ -318,9 +318,16 @@ describe("task 4.1 [SECURITY] B: the feed updates by visibility-aware POLLING (r
     // Locked guest (RSVPs on, not unlocked): a prompt to RSVP, anchored at the RSVP form.
     expect(COMMENTS_FEED, "locked guest is pointed at #rsvp (未解锁点发提示先RSVP)").toContain("#rsvp");
     // RSVPs off: the guest composer is replaced by a host-only notice, never a textarea.
+    // i18n: the notice text now lives in the message catalog (feed.hostOnly); the component
+    // renders it via t("hostOnly") only in the !rsvpEnabled (non-host) branch.
     expect(
-      /Only the host can post/i.test(COMMENTS_FEED),
-      "rsvp_enabled=false ⇒ host-only notice (guest 隐藏输入框)",
+      /t\(\s*["']hostOnly["']\s*\)/.test(COMMENTS_FEED),
+      "rsvp_enabled=false ⇒ host-only notice via t('hostOnly') (guest 隐藏输入框)",
+    ).toBe(true);
+    const FEED_MESSAGES = JSON.parse(src("messages/en.json")).feed;
+    expect(
+      /only the host can post/i.test(FEED_MESSAGES?.hostOnly ?? ""),
+      "messages/en.json feed.hostOnly conveys the host-only restriction",
     ).toBe(true);
   });
 

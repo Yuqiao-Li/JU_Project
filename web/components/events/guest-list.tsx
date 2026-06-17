@@ -1,3 +1,5 @@
+import { getTranslations } from "next-intl/server";
+
 import {
   groupGuestList,
   guestHeadcount,
@@ -25,7 +27,7 @@ import {
  * direct table read (D4). New arrivals fade in on the next poll (reduced-motion honored
  * globally).
  */
-export function GuestList({
+export async function GuestList({
   guests,
   unlocked,
   hidden,
@@ -47,24 +49,25 @@ export function GuestList({
   // no section rather than a misleading "no replies yet". Either way: nothing to render.
   if (!unlocked || hidden) return null;
 
+  const t = await getTranslations("feed");
   const { going, maybe } = groupGuestList(guests);
 
   return (
     <section className="mt-10">
-      <h2 className="eyebrow">Who&rsquo;s coming</h2>
+      <h2 className="eyebrow">{t("whosComing")}</h2>
 
       {going.length === 0 && maybe.length === 0 ? (
-        <p className="mt-2 text-muted">No replies yet — be the first to RSVP.</p>
+        <p className="mt-2 text-muted">{t("noRepliesYet")}</p>
       ) : (
         <div className="mt-3 space-y-6">
           <Group
-            label="Going"
+            label={t("going")}
             entries={going}
             showCounts={showCounts}
             accent={accent}
           />
           <Group
-            label="Maybe"
+            label={t("maybe")}
             entries={maybe}
             showCounts={showCounts}
             accent={accent}

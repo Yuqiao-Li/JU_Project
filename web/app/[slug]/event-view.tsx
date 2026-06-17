@@ -1,3 +1,5 @@
+import { useTranslations } from "next-intl";
+
 import { AddToCalendar } from "@/components/events/add-to-calendar";
 import { spotsLeftLabel } from "@/lib/events/capacity";
 import { formatEventWhen } from "@/lib/events/format";
@@ -51,6 +53,7 @@ export function EventView({
    */
   commentsSlot?: React.ReactNode;
 }) {
+  const t = useTranslations("eventPage");
   const accent = themeSwatch(themeColorFromJson(event.theme)).hex;
   const when = formatEventWhen(event.starts_at ?? null, event.date_tbd ?? false);
   const isPrivate = event.visibility === "private";
@@ -80,7 +83,10 @@ export function EventView({
                 className="size-2 rounded-full"
                 style={{ backgroundColor: accent }}
               />
-              <strong className="font-semibold">{event.going_count}</strong> going
+              {t.rich("going", {
+                count: event.going_count ?? 0,
+                strong: (chunks) => <strong className="font-semibold">{chunks}</strong>,
+              })}
             </span>
           )}
           {capacityLine && (
@@ -99,7 +105,7 @@ export function EventView({
       {pollSlot}
 
       {/* ── Where ────────────────────────────────────────────────────────────── */}
-      <Section title="Where">
+      <Section title={t("whereTitle")}>
         {fullAddress ? (
           <div className="space-y-1">
             <p className="text-paper">{fullAddress}</p>
@@ -110,7 +116,7 @@ export function EventView({
                 rel="noopener noreferrer"
                 className="inline-block text-sm font-medium text-iris underline-offset-2 hover:underline"
               >
-                Open map
+                {t("openMap")}
               </a>
             )}
           </div>
@@ -118,24 +124,24 @@ export function EventView({
           <div className="space-y-1">
             <p className="text-paper">{event.location_city}</p>
             {event.rsvp_enabled !== false && (
-              <p className="text-sm text-muted">RSVP to see the exact address.</p>
+              <p className="text-sm text-muted">{t("rsvpToSeeAddress")}</p>
             )}
           </div>
         ) : (
-          <p className="text-muted">Location to be shared.</p>
+          <p className="text-muted">{t("locationTba")}</p>
         )}
       </Section>
 
       {/* ── About ────────────────────────────────────────────────────────────── */}
       {event.description && (
-        <Section title="About">
+        <Section title={t("aboutTitle")}>
           <p className="whitespace-pre-wrap leading-relaxed text-paper/90">{event.description}</p>
         </Section>
       )}
 
       {/* ── Chip in (display only — never an obligation, D: chip_in 纯展示) ────── */}
       {event.chip_in_url && (
-        <Section title="Chip in">
+        <Section title={t("chipInTitle")}>
           {event.chip_in_note && <p className="text-paper/90">{event.chip_in_note}</p>}
           <a
             href={event.chip_in_url}
@@ -143,7 +149,7 @@ export function EventView({
             rel="noopener noreferrer"
             className="mt-2 inline-flex h-10 items-center justify-center rounded-lg border border-line px-4 text-sm font-medium text-paper transition hover:bg-surface-2"
           >
-            Chip in
+            {t("chipInButton")}
           </a>
         </Section>
       )}
@@ -177,6 +183,7 @@ function Hero({
   when: string;
   isPrivate: boolean;
 }) {
+  const t = useTranslations("eventPage");
   const cover = event.cover_image_url ?? null;
   const surface = cover
     ? { backgroundImage: `url(${JSON.stringify(cover)})` }
@@ -193,10 +200,12 @@ function Hero({
       <div aria-hidden className="absolute inset-0 bg-gradient-to-t from-ink via-ink/55 to-transparent" />
       <div className="relative">
         <div className="flex flex-wrap items-center gap-2 text-sm text-muted">
-          {event.host_display_name && <span>Hosted by {event.host_display_name}</span>}
+          {event.host_display_name && (
+            <span>{t("hostedBy", { name: event.host_display_name })}</span>
+          )}
           {isPrivate && (
             <span className="rounded-full border border-line bg-ink/50 px-2.5 py-0.5 text-xs text-muted backdrop-blur">
-              Private
+              {t("privateBadge")}
             </span>
           )}
         </div>

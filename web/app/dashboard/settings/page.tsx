@@ -1,3 +1,4 @@
+import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
@@ -7,6 +8,7 @@ import { createClient } from "@/lib/supabase/server";
 import { ProfileForm } from "./profile-form";
 
 export default async function SettingsPage() {
+  const t = await getTranslations("settings");
   const supabase = await createClient();
   const {
     data: { user },
@@ -24,16 +26,18 @@ export default async function SettingsPage() {
       <header className="flex items-center justify-between border-b border-line px-5 py-4 sm:px-8">
         <Wordmark href="/dashboard" />
         <Link href="/dashboard" className="text-sm text-muted transition hover:text-paper">
-          Back to events
+          {t("backToEvents")}
         </Link>
       </header>
 
       <main className="mx-auto w-full max-w-md flex-1 px-5 py-12 sm:px-8">
-        <p className="eyebrow">Profile</p>
-        <h1 className="mt-2 font-display text-2xl font-extrabold text-paper">Your details</h1>
+        <p className="eyebrow">{t("eyebrow")}</p>
+        <h1 className="mt-2 font-display text-2xl font-extrabold text-paper">{t("title")}</h1>
         <p className="mt-2 text-sm text-muted">
-          Your name shows on events you host. Your username is your public profile at{" "}
-          <span className="font-mono text-paper">/u/&lt;username&gt;</span>.
+          {t.rich("description", {
+            handle: (chunks) => <span className="font-mono text-paper">{chunks}</span>,
+            path: "/u/<username>",
+          })}
         </p>
 
         <div className="mt-8">

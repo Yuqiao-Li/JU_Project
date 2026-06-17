@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { useEffect } from "react";
 
 import { Wordmark } from "@/components/brand/wordmark";
@@ -23,6 +24,8 @@ export default function RouteError({
   error: Error & { digest?: string };
   unstable_retry: () => void;
 }) {
+  const t = useTranslations("errors");
+
   useEffect(() => {
     console.error(error);
   }, [error]);
@@ -32,11 +35,10 @@ export default function RouteError({
       <div className="w-full max-w-md text-center">
         <Wordmark href="/" className="text-2xl" />
         <h1 className="mt-10 text-balance font-display text-3xl font-extrabold leading-tight text-paper">
-          Something went sideways.
+          {t("generic.title")}
         </h1>
         <p className="mx-auto mt-4 max-w-sm text-balance text-muted">
-          That didn&rsquo;t load. It&rsquo;s usually a blip — try again, and if it keeps happening,
-          come back in a bit.
+          {t("route.body")}
         </p>
         <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
           <button
@@ -44,13 +46,13 @@ export default function RouteError({
             onClick={() => unstable_retry()}
             className="inline-flex h-12 items-center justify-center rounded-xl bg-coral px-7 font-semibold text-ink transition hover:brightness-105"
           >
-            Try again
+            {t("actions.retry")}
           </button>
           <Link
             href="/"
             className="inline-flex h-12 items-center justify-center rounded-xl border border-line px-6 font-semibold text-paper transition hover:bg-surface-2"
           >
-            Go home
+            {t("actions.goHome")}
           </Link>
         </div>
       </div>

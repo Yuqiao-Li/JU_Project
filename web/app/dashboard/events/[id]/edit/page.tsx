@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 
 import { DatePollManager, type DatePollOptionView } from "@/components/events/date-poll-manager";
 import { parseDatePoll } from "@/lib/events/date-poll";
@@ -40,6 +41,8 @@ export default async function EditEventPage({
 
   if (!event) notFound();
 
+  const t = await getTranslations("eventForm");
+
   // Date poll (task 5.1): read the candidate dates + live tally through the host's own
   // session. get_date_poll's private gate is owner-aware, so the host reads their own
   // event's poll (public or private) on the single read path — no direct table read.
@@ -76,25 +79,29 @@ export default async function EditEventPage({
   return (
     <div className="mx-auto w-full max-w-2xl flex-1 px-5 py-12 sm:px-8">
       <Link href="/dashboard" className="text-sm text-muted transition hover:text-paper">
-        ← Your events
+        ← {t("backToEvents")}
       </Link>
 
       <div className="mt-6 flex items-center gap-3">
-        <p className="eyebrow">Edit event</p>
+        <p className="eyebrow">{t("editEyebrow")}</p>
         <span className="rounded-full border border-line px-2.5 py-0.5 text-xs text-muted">
-          {event.status === "published" ? "Published" : event.status === "cancelled" ? "Cancelled" : "Draft"}
+          {event.status === "published"
+            ? t("statusPublished")
+            : event.status === "cancelled"
+              ? t("statusCancelled")
+              : t("statusDraft")}
         </span>
       </div>
       <h1 className="mt-2 text-balance font-display text-3xl font-extrabold text-paper">{event.title}</h1>
 
       {created && (
         <p className="mt-4 rounded-xl border border-iris/40 bg-iris/10 px-4 py-3 text-sm text-paper">
-          Your event is live. Share this link — guests RSVP without an account.
+          {t("liveBanner")}
         </p>
       )}
 
       <div className="mt-4 rounded-xl border border-line bg-surface/60 px-4 py-3">
-        <p className="text-sm text-muted">Public link</p>
+        <p className="text-sm text-muted">{t("publicLink")}</p>
         <code className="mt-1 block break-all font-mono text-sm text-iris">/{event.slug}</code>
       </div>
 

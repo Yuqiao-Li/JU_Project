@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
 
 import {
@@ -60,6 +61,7 @@ export function CommentsFeed({
   /** Host accent (events.theme.color) for the host badge / submit tint. */
   accent: string;
 }) {
+  const t = useTranslations("feed");
   const [comments, setComments] = useState<CommentEntry[]>(initialComments);
   const [body, setBody] = useState("");
   const [busy, setBusy] = useState(false);
@@ -109,7 +111,7 @@ export function CommentsFeed({
 
     const parsed = commentInputSchema.safeParse({ body, token });
     if (!parsed.success) {
-      setError(parsed.error.issues[0]?.message ?? "Check your comment.");
+      setError(parsed.error.issues[0]?.message ?? t("errorCheckComment"));
       return;
     }
 
@@ -126,7 +128,7 @@ export function CommentsFeed({
         const message =
           data && typeof data === "object" && typeof (data as { message?: unknown }).message === "string"
             ? (data as { message: string }).message
-            : "Couldn’t post your comment. Try again.";
+            : t("errorPostFailed");
         setError(message);
         return;
       }
@@ -138,7 +140,7 @@ export function CommentsFeed({
       const next = await fetchComments(slug, token);
       applyComments(next);
     } catch {
-      setError("Something went wrong. Check your connection and try again.");
+      setError(t("errorNetwork"));
     } finally {
       setBusy(false);
     }
@@ -146,11 +148,11 @@ export function CommentsFeed({
 
   return (
     <section className="mt-10">
-      <h2 className="eyebrow">Activity</h2>
+      <h2 className="eyebrow">{t("activity")}</h2>
 
       {/* Feed — oldest → newest, as the RPC returns it. */}
       {comments.length === 0 ? (
-        <p className="mt-3 text-muted">No comments yet — say hi 👋</p>
+        <p className="mt-3 text-muted">{t("noComments")}</p>
       ) : (
         <ul className="mt-3 space-y-3">
           {comments.map((c) => (
@@ -160,14 +162,14 @@ export function CommentsFeed({
             >
               <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
                 <span className="text-sm font-semibold text-paper">
-                  {c.author_display_name ?? "Guest"}
+                  {c.author_display_name ?? t("guestFallback")}
                 </span>
                 {c.is_host && (
                   <span
                     className="rounded-full px-1.5 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide text-ink"
                     style={{ backgroundColor: accent }}
                   >
-                    Host
+                    {t("hostBadge")}
                   </span>
                 )}
                 {!hideTimestamps && (
@@ -189,7 +191,7 @@ export function CommentsFeed({
         {canCompose ? (
           <form onSubmit={handleSubmit} className="space-y-2">
             <label htmlFor="comment-body" className="sr-only">
-              Add a comment
+              {t("addCommentLabel")}
             </label>
             <textarea
               id="comment-body"
@@ -206,7 +208,7 @@ export function CommentsFeed({
               }}
               rows={2}
               maxLength={2000}
-              placeholder={viewerIsHost ? "Post an update…" : "Add a comment…"}
+              placeholder={viewerIsHost ? t("placeholderHost") : t("placeholderGuest")}
               className="w-full resize-y rounded-xl border border-line bg-ink/40 px-3.5 py-2.5 text-paper placeholder:text-muted/60 focus-visible:border-iris"
             />
             {error && (
@@ -215,7 +217,7 @@ export function CommentsFeed({
               </p>
             )}
             {justPosted && !error && (
-              <p className="text-sm text-muted">Posted.</p>
+              <p className="text-sm text-muted">{t("posted")}</p>
             )}
             <div className="flex justify-end">
               <button
@@ -224,22 +226,25 @@ export function CommentsFeed({
                 aria-busy={busy}
                 className="inline-flex h-10 items-center justify-center rounded-xl bg-coral px-4 text-sm font-semibold text-ink transition hover:brightness-105 disabled:opacity-60"
               >
-                {busy ? "Posting…" : "Post"}
+                {busy ? t("posting") : t("post")}
               </button>
             </div>
           </form>
         ) : rsvpEnabled ? (
           // Locked guest: read-open, but posting needs an RSVP (未解锁点发提示先RSVP).
           <p className="rounded-xl border border-line bg-surface/40 px-4 py-3 text-sm text-muted">
-            <a href="#rsvp" className="font-medium text-iris underline-offset-2 hover:underline">
-              RSVP
-            </a>{" "}
-            to join the conversation.
+            {t.rich("rsvpToJoin", {
+              rsvp: (chunks) => (
+                <a href="#rsvp" className="font-medium text-iris underline-offset-2 hover:underline">
+                  {chunks}
+                </a>
+              ),
+            })}
           </p>
         ) : (
           // RSVPs off ⇒ host-only feed: no guest composer at all (guest 隐藏输入框).
           <p className="rounded-xl border border-line bg-surface/40 px-4 py-3 text-sm text-muted">
-            Only the host can post here.
+            {t("hostOnly")}
           </p>
         )}
       </div>

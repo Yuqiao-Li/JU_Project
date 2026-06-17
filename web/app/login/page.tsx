@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 
 import { LoginForm } from "@/components/auth/login-form";
 import { Wordmark } from "@/components/brand/wordmark";
@@ -20,6 +21,8 @@ export default async function LoginPage({
   } = await supabase.auth.getUser();
   if (user) redirect(next);
 
+  const t = await getTranslations("auth");
+
   return (
     <main className="relative flex flex-1 items-center justify-center overflow-hidden px-5 py-16">
       {/* Signature: the party light behind the wordmark. */}
@@ -31,17 +34,12 @@ export default async function LoginPage({
       <div className="relative w-full max-w-sm">
         <div className="mb-8 text-center">
           <Wordmark href="/" className="text-3xl" />
-          <p className="mt-3 text-balance text-sm text-muted">
-            Make an event, share a link, watch the yeses roll in.
-          </p>
+          <p className="mt-3 text-balance text-sm text-muted">{t("tagline")}</p>
         </div>
 
         <LoginForm next={next} />
 
-        <p className="mt-8 text-center text-xs leading-relaxed text-muted">
-          Hosting is account-only. Guests don&apos;t sign in — they just open your invite link and
-          RSVP.
-        </p>
+        <p className="mt-8 text-center text-xs leading-relaxed text-muted">{t("guestNote")}</p>
       </div>
     </main>
   );

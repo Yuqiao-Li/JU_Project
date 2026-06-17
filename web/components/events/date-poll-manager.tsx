@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useActionState } from "react";
 
 import {
@@ -40,24 +41,23 @@ export function DatePollManager({
   dateTbd: boolean;
   options: DatePollOptionView[];
 }) {
+  const t = useTranslations("feed");
   const [addState, addAction, adding] = useActionState(addDateOption, INITIAL);
 
   return (
     <section className="rounded-2xl border border-line bg-surface/40 p-5 sm:p-6">
       <div className="flex items-center gap-3">
-        <p className="eyebrow">Date poll</p>
+        <p className="eyebrow">{t("datePoll")}</p>
         {!dateTbd && (
-          <span className="rounded-full border border-line px-2.5 py-0.5 text-xs text-muted">Date locked in</span>
+          <span className="rounded-full border border-line px-2.5 py-0.5 text-xs text-muted">{t("dateLockedIn")}</span>
         )}
       </div>
       <p className="mt-2 text-sm text-muted">
-        {dateTbd
-          ? "Offer a few dates and let guests vote. Lock one in when you’re ready — votes are kept."
-          : "You’ve locked in a date. You can still adjust the candidates below."}
+        {dateTbd ? t("datePollHintTbd") : t("datePollHintLocked")}
       </p>
 
       {options.length === 0 ? (
-        <p className="mt-4 text-sm text-muted">No dates yet. Add the first option below.</p>
+        <p className="mt-4 text-sm text-muted">{t("noDatesYet")}</p>
       ) : (
         <ul className="mt-4 space-y-2">
           {options.map((o) => (
@@ -69,11 +69,11 @@ export function DatePollManager({
       {/* Add a candidate */}
       <form action={addAction} className="mt-5 border-t border-line/60 pt-5">
         <input type="hidden" name="event_id" value={eventId} />
-        <p className="text-sm font-medium text-paper">Add a date</p>
+        <p className="text-sm font-medium text-paper">{t("addDate")}</p>
         <div className="mt-2 grid gap-3 sm:grid-cols-2">
           <div className="flex flex-col gap-1.5">
             <label htmlFor="poll-starts" className="text-xs text-muted">
-              Starts
+              {t("starts")}
             </label>
             <input
               id="poll-starts"
@@ -85,7 +85,7 @@ export function DatePollManager({
           </div>
           <div className="flex flex-col gap-1.5">
             <label htmlFor="poll-ends" className="text-xs text-muted">
-              Ends <span className="text-muted/60">(optional)</span>
+              {t("ends")} <span className="text-muted/60">{t("optional")}</span>
             </label>
             <input
               id="poll-ends"
@@ -106,7 +106,7 @@ export function DatePollManager({
           aria-busy={adding}
           className="mt-3 inline-flex h-10 items-center justify-center rounded-xl border border-line px-4 text-sm font-semibold text-paper transition hover:bg-surface-2 disabled:opacity-60"
         >
-          {adding ? "Adding…" : "Add date"}
+          {adding ? t("adding") : t("addDateButton")}
         </button>
       </form>
     </section>
@@ -123,6 +123,7 @@ function DateOptionRow({
   option: DatePollOptionView;
   dateTbd: boolean;
 }) {
+  const t = useTranslations("feed");
   const [finalizeState, finalizeActionFn, finalizing] = useActionState(finalizeDate, INITIAL);
   const [removeState, removeActionFn, removing] = useActionState(removeDateOption, INITIAL);
   const error = finalizeState.status === "error" ? finalizeState.message : removeState.status === "error" ? removeState.message : null;
@@ -133,7 +134,7 @@ function DateOptionRow({
         <div className="min-w-0">
           <p className="truncate text-paper">{formatOptionWhen(option.starts_at, option.ends_at)}</p>
           <p className="text-sm text-muted">
-            {option.votes} {option.votes === 1 ? "vote" : "votes"}
+            {t("voteCount", { count: option.votes })}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -147,7 +148,7 @@ function DateOptionRow({
                 aria-busy={finalizing}
                 className="inline-flex h-9 items-center justify-center rounded-lg bg-coral px-3 text-sm font-semibold text-ink transition hover:brightness-105 disabled:opacity-60"
               >
-                {finalizing ? "Locking…" : "Lock in"}
+                {finalizing ? t("locking") : t("lockIn")}
               </button>
             </form>
           )}
@@ -160,7 +161,7 @@ function DateOptionRow({
               aria-busy={removing}
               className="inline-flex h-9 items-center justify-center rounded-lg border border-line px-3 text-sm font-medium text-muted transition hover:bg-surface-2 hover:text-paper disabled:opacity-60"
             >
-              {removing ? "Removing…" : "Remove"}
+              {removing ? t("removing") : t("remove")}
             </button>
           </form>
         </div>

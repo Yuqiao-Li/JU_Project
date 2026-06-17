@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 
 import { signOut } from "@/app/auth/actions";
 import { Wordmark } from "@/components/brand/wordmark";
@@ -30,6 +31,8 @@ export default async function DashboardPage() {
     .eq("id", user.id)
     .maybeSingle();
 
+  const t = await getTranslations("dashboard");
+
   const greetingName = profile?.display_name?.trim() || user.email?.split("@")[0] || "host";
 
   const { data: feed, error } = await supabase.rpc("get_my_events");
@@ -43,14 +46,14 @@ export default async function DashboardPage() {
         <Wordmark href="/dashboard" />
         <nav className="flex items-center gap-4 text-sm">
           <Link href="/dashboard/settings" className="text-muted transition hover:text-paper">
-            Settings
+            {t("nav.settings")}
           </Link>
           <form action={signOut}>
             <button
               type="submit"
               className="rounded-lg border border-line px-3 py-1.5 text-paper transition hover:bg-surface-2"
             >
-              Sign out
+              {t("nav.signOut")}
             </button>
           </form>
         </nav>
@@ -59,39 +62,52 @@ export default async function DashboardPage() {
       <main className="mx-auto w-full max-w-2xl flex-1 px-5 py-12 sm:px-8">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
-            <p className="eyebrow">Your events</p>
+            <p className="eyebrow">{t("eyebrow")}</p>
             <h1 className="mt-2 text-balance font-display text-3xl font-extrabold text-paper">
-              Hey {greetingName}
+              {t("greeting", { name: greetingName })}
             </h1>
           </div>
           <Link
             href="/dashboard/events/new"
             className="inline-flex h-11 items-center justify-center rounded-xl bg-coral px-5 font-semibold text-ink transition hover:brightness-105"
           >
-            New event
+            {t("newEvent")}
           </Link>
         </div>
 
         {!hasEvents ? (
           <div className="mt-8 rounded-2xl border border-line bg-surface/60 p-6">
-            <p className="text-paper">No events yet.</p>
-            <p className="mt-1 text-sm text-muted">
-              Create your first event, publish it, and share the link — guests RSVP without an
-              account.
-            </p>
+            <p className="text-paper">{t("empty.title")}</p>
+            <p className="mt-1 text-sm text-muted">{t("empty.body")}</p>
             {!profile?.username && (
               <Link
                 href="/dashboard/settings"
                 className="mt-4 inline-flex h-11 items-center justify-center rounded-xl border border-line px-5 font-semibold text-paper transition hover:bg-surface-2"
               >
-                Choose your username
+                {t("empty.chooseUsername")}
               </Link>
             )}
           </div>
         ) : (
           <div className="mt-10 space-y-12">
-            <EventSection title="Upcoming" events={upcoming} emptyHint="Nothing on the calendar yet." />
-            {past.length > 0 && <EventSection title="Past" events={past} muted />}
+            <EventSection
+              title={t("sections.upcoming")}
+              events={upcoming}
+              emptyHint={t("sections.upcomingEmpty")}
+              roleLabels={{ hosting: t("role.hosting"), going: t("role.going") }}
+              privateLabel={t("badge.private")}
+              locationSeparator={t("card.locationSeparator")}
+            />
+            {past.length > 0 && (
+              <EventSection
+                title={t("sections.past")}
+                events={past}
+                muted
+                roleLabels={{ hosting: t("role.hosting"), going: t("role.going") }}
+                privateLabel={t("badge.private")}
+                locationSeparator={t("card.locationSeparator")}
+              />
+            )}
           </div>
         )}
       </main>
@@ -99,16 +115,24 @@ export default async function DashboardPage() {
   );
 }
 
+type RoleLabels = { hosting: string; going: string };
+
 function EventSection({
   title,
   events,
   emptyHint,
   muted = false,
+  roleLabels,
+  privateLabel,
+  locationSeparator,
 }: {
   title: string;
   events: MyEvent[];
   emptyHint?: string;
   muted?: boolean;
+  roleLabels: RoleLabels;
+  privateLabel: string;
+  locationSeparator: string;
 }) {
   return (
     <section>
@@ -119,7 +143,13 @@ function EventSection({
         <ul className="mt-4 space-y-3">
           {events.map((event) => (
             <li key={event.id}>
-              <EventCard event={event} muted={muted} />
+              <EventCard
+                event={event}
+                muted={muted}
+                roleLabels={roleLabels}
+                privateLabel={privateLabel}
+                locationSeparator={locationSeparator}
+              />
             </li>
           ))}
         </ul>
@@ -128,7 +158,19 @@ function EventSection({
   );
 }
 
-function EventCard({ event, muted }: { event: MyEvent; muted: boolean }) {
+function EventCard({
+  event,
+  muted,
+  roleLabels,
+  privateLabel,
+  locationSeparator,
+}: {
+  event: MyEvent;
+  muted: boolean;
+  roleLabels: RoleLabels;
+  privateLabel: string;
+  locationSeparator: string;
+}) {
   const isHost = event.role === "host";
   // A host owns the event → land on the management detail page; an attendee opens
   // the public page they RSVP'd through (the slug is the shareable credential).
@@ -143,7 +185,7 @@ function EventCard({ event, muted }: { event: MyEvent; muted: boolean }) {
       }`}
     >
       <div className="flex items-center gap-2">
-        <RoleBadge isHost={isHost} />
+        <RoleBadge isHost={isHost} labels={roleLabels} />
         {isHost && event.status !== "published" && (
           <span className="rounded-full border border-line px-2.5 py-0.5 text-xs capitalize text-muted">
             {event.status}
@@ -151,27 +193,27 @@ function EventCard({ event, muted }: { event: MyEvent; muted: boolean }) {
         )}
         {event.visibility === "private" && (
           <span className="rounded-full border border-line px-2.5 py-0.5 text-xs text-muted">
-            Private
+            {privateLabel}
           </span>
         )}
       </div>
       <h3 className="mt-3 font-display text-lg font-bold text-paper">{event.title}</h3>
       <p className="mt-1 text-sm text-muted">
         {when}
-        {event.location_city ? ` · ${event.location_city}` : ""}
+        {event.location_city ? `${locationSeparator}${event.location_city}` : ""}
       </p>
     </Link>
   );
 }
 
-function RoleBadge({ isHost }: { isHost: boolean }) {
+function RoleBadge({ isHost, labels }: { isHost: boolean; labels: RoleLabels }) {
   return isHost ? (
     <span className="rounded-full bg-coral/15 px-2.5 py-0.5 text-xs font-semibold text-coral">
-      Hosting
+      {labels.hosting}
     </span>
   ) : (
     <span className="rounded-full bg-iris/15 px-2.5 py-0.5 text-xs font-semibold text-iris">
-      Going
+      {labels.going}
     </span>
   );
 }

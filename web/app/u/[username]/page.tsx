@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 
 import { Wordmark } from "@/components/brand/wordmark";
@@ -50,6 +51,7 @@ export default async function OrganizerProfilePage({
   // Stored handles are lowercased on save (lib/profile/username), and the RPC matches
   // exactly — so normalize the URL segment to resolve `/u/Rain` and `/u/rain` alike.
   const handle = normalizeUsername(decodeURIComponent(username));
+  const t = await getTranslations("organizer");
 
   const events = await readPublicEventsByHost(handle);
   const { upcoming, past } = groupPublicEventsByTime(events, new Date());
@@ -64,7 +66,7 @@ export default async function OrganizerProfilePage({
           href="/login"
           className="text-sm text-muted transition hover:text-paper"
         >
-          Host your own
+          {t("hostYourOwn")}
         </Link>
       </header>
 
@@ -77,7 +79,7 @@ export default async function OrganizerProfilePage({
             {monogram}
           </span>
           <div>
-            <p className="eyebrow">Organizer</p>
+            <p className="eyebrow">{t("eyebrow")}</p>
             <h1 className="mt-1 font-display text-3xl font-extrabold tracking-tight text-paper">
               @{handle}
             </h1>
@@ -86,16 +88,15 @@ export default async function OrganizerProfilePage({
 
         {!hasEvents ? (
           <div className="mt-10 rounded-2xl border border-line bg-surface/60 p-6">
-            <p className="text-paper">No public events yet.</p>
-            <p className="mt-1 text-sm text-muted">
-              When this host publishes a public event, it shows up here. Private events stay
-              off the profile.
-            </p>
+            <p className="text-paper">{t("emptyTitle")}</p>
+            <p className="mt-1 text-sm text-muted">{t("emptyBody")}</p>
           </div>
         ) : (
           <div className="mt-10 space-y-12">
-            <EventSection title="Upcoming" events={upcoming} />
-            {past.length > 0 && <EventSection title="Past" events={past} muted />}
+            <EventSection title={t("upcoming")} events={upcoming} />
+            {past.length > 0 && (
+              <EventSection title={t("past")} events={past} muted />
+            )}
           </div>
         )}
       </main>

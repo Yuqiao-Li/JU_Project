@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useRef, useState } from "react";
 
 import { COVER_MAX_BYTES, uploadEventCover, validateCoverFile } from "@/lib/events/cover";
@@ -19,6 +20,7 @@ import { createClient } from "@/lib/supabase/client";
  * background (no next/image remote config needed, no layout shift).
  */
 export function CoverUploader({ eventId, initialUrl }: { eventId: string | null; initialUrl: string }) {
+  const t = useTranslations("eventForm");
   const [url, setUrl] = useState(initialUrl);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -65,13 +67,17 @@ export function CoverUploader({ eventId, initialUrl }: { eventId: string | null;
         {!url && (
           <div className="flex w-full flex-col items-center justify-center gap-1 self-center px-4 text-center">
             <p className="text-sm text-muted">
-              {eventId ? "Add a cover image" : "Save the event first, then add a cover"}
+              {eventId ? t("addCover") : t("saveFirstThenCover")}
             </p>
-            <p className="text-xs text-muted/60">PNG, JPG, or WebP · up to {Math.round(COVER_MAX_BYTES / 1024 / 1024)}MB</p>
+            <p className="text-xs text-muted/60">
+              {t("coverFormats", { size: Math.round(COVER_MAX_BYTES / 1024 / 1024) })}
+            </p>
           </div>
         )}
         {url && (
-          <span className="m-3 rounded-full bg-ink/70 px-3 py-1 text-xs text-paper backdrop-blur">Cover set</span>
+          <span className="m-3 rounded-full bg-ink/70 px-3 py-1 text-xs text-paper backdrop-blur">
+            {t("coverSet")}
+          </span>
         )}
       </div>
 
@@ -91,7 +97,7 @@ export function CoverUploader({ eventId, initialUrl }: { eventId: string | null;
             disabled={busy}
             className="h-10 rounded-xl border border-line px-4 text-sm font-medium text-paper transition hover:bg-surface-2 disabled:opacity-60"
           >
-            {busy ? "Uploading…" : url ? "Replace cover" : "Upload cover"}
+            {busy ? t("uploading") : url ? t("replaceCover") : t("uploadCover")}
           </button>
           {url && (
             <button
@@ -100,7 +106,7 @@ export function CoverUploader({ eventId, initialUrl }: { eventId: string | null;
               disabled={busy}
               className="h-10 rounded-xl px-3 text-sm text-muted transition hover:text-paper disabled:opacity-60"
             >
-              Remove
+              {t("remove")}
             </button>
           )}
         </div>

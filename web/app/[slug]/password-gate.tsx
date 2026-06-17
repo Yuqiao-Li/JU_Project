@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 
 import { EventClient } from "./event-client";
@@ -38,6 +39,7 @@ export function PasswordGate({
   cover: string | null;
   description: string | null;
 }) {
+  const t = useTranslations("password");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -73,7 +75,7 @@ export function PasswordGate({
       });
 
       if (res.status === 429) {
-        setError("Too many tries. Wait a moment and try again.");
+        setError(t("errorTooMany"));
         return;
       }
 
@@ -92,9 +94,9 @@ export function PasswordGate({
         return;
       }
 
-      setError("That password didn’t match. Try again.");
+      setError(t("errorMismatch"));
     } catch {
-      setError("Something went wrong. Check your connection and try again.");
+      setError(t("errorGeneric"));
     } finally {
       setBusy(false);
     }
@@ -115,13 +117,13 @@ export function PasswordGate({
         </div>
 
         <div className="p-6 sm:p-7">
-          <p className="eyebrow">Private event</p>
+          <p className="eyebrow">{t("eyebrow")}</p>
           <h1 className="mt-2 text-balance font-display text-2xl font-extrabold text-paper">{title}</h1>
           {description && <p className="mt-2 text-sm leading-relaxed text-muted">{description}</p>}
 
           <form onSubmit={onSubmit} className="mt-5 space-y-3">
             <label htmlFor="event-password" className="block text-sm font-medium text-paper">
-              This event is password protected
+              {t("label")}
             </label>
             <input
               id="event-password"
@@ -130,7 +132,7 @@ export function PasswordGate({
               autoComplete="off"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="Enter the password"
+              placeholder={t("placeholder")}
               aria-invalid={error ? true : undefined}
               className="h-11 w-full rounded-xl border border-line bg-ink/40 px-3.5 text-paper placeholder:text-muted/60 focus-visible:border-iris"
             />
@@ -145,7 +147,7 @@ export function PasswordGate({
               aria-busy={busy}
               className="inline-flex h-11 w-full items-center justify-center rounded-xl bg-coral px-5 font-semibold text-ink transition hover:brightness-105 disabled:opacity-60"
             >
-              {busy ? "Checking…" : "Unlock"}
+              {busy ? t("checking") : t("unlock")}
             </button>
           </form>
         </div>

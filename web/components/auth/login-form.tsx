@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 
 import { createClient } from "@/lib/supabase/client";
@@ -12,6 +13,7 @@ type Status = { kind: "idle" } | { kind: "sending" } | { kind: "sent" } | { kind
  * sanitized `next` so people land where they were headed.
  */
 export function LoginForm({ next }: { next: string }) {
+  const t = useTranslations("auth");
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState<Status>({ kind: "idle" });
 
@@ -45,17 +47,19 @@ export function LoginForm({ next }: { next: string }) {
   if (status.kind === "sent") {
     return (
       <div className="rounded-2xl border border-line bg-surface/70 p-6 text-center">
-        <p className="font-display text-lg font-bold text-paper">Check your email</p>
+        <p className="font-display text-lg font-bold text-paper">{t("checkEmailTitle")}</p>
         <p className="mt-2 text-sm text-muted">
-          We sent a sign-in link to <span className="text-paper">{email}</span>. Open it on this
-          device to continue.
+          {t.rich("checkEmailBody", {
+            email,
+            highlight: (chunks) => <span className="text-paper">{chunks}</span>,
+          })}
         </p>
         <button
           type="button"
           onClick={() => setStatus({ kind: "idle" })}
           className="mt-4 text-sm font-medium text-iris underline-offset-4 hover:underline"
         >
-          Use a different email
+          {t("useDifferentEmail")}
         </button>
       </div>
     );
@@ -67,7 +71,7 @@ export function LoginForm({ next }: { next: string }) {
     <div className="flex flex-col gap-4">
       <form onSubmit={sendMagicLink} className="flex flex-col gap-3">
         <label htmlFor="email" className="eyebrow">
-          Email
+          {t("emailLabel")}
         </label>
         <input
           id="email"
@@ -85,13 +89,13 @@ export function LoginForm({ next }: { next: string }) {
           disabled={busy}
           className="h-12 rounded-xl bg-coral px-5 font-semibold text-ink transition hover:brightness-105 disabled:opacity-60"
         >
-          {busy ? "One sec…" : "Email me a sign-in link"}
+          {busy ? t("sending") : t("sendMagicLink")}
         </button>
       </form>
 
       <div className="flex items-center gap-3 text-muted">
         <span className="h-px flex-1 bg-line" />
-        <span className="eyebrow">or</span>
+        <span className="eyebrow">{t("or")}</span>
         <span className="h-px flex-1 bg-line" />
       </div>
 
@@ -101,7 +105,7 @@ export function LoginForm({ next }: { next: string }) {
         disabled={busy}
         className="flex h-12 items-center justify-center gap-2 rounded-xl border border-line bg-surface px-5 font-medium text-paper transition hover:bg-surface-2 disabled:opacity-60"
       >
-        Continue with Google
+        {t("continueWithGoogle")}
       </button>
 
       {status.kind === "error" && (

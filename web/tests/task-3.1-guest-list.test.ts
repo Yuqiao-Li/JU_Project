@@ -11,7 +11,6 @@ import {
   groupGuestList,
   guestHeadcount,
   parseGuestList,
-  type GuestListEntry,
 } from "../lib/events/guest-list";
 
 /**

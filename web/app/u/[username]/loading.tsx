@@ -1,3 +1,5 @@
+import { getTranslations } from "next-intl/server";
+
 import { Skeleton } from "@/components/ui/skeleton";
 
 /**
@@ -5,11 +7,12 @@ import { Skeleton } from "@/components/ui/skeleton";
  * header, the monogram + handle, and a card grid — so the public events read streams into
  * a shape the visitor already recognizes.
  */
-export default function Loading() {
+export default async function Loading() {
+  const t = await getTranslations("organizer");
   return (
     <div className="flex min-h-full flex-col">
       <p className="sr-only" role="status">
-        Loading profile…
+        {t("loading")}
       </p>
       <header className="flex items-center justify-between border-b border-line px-5 py-4 sm:px-8">
         <Skeleton className="h-6 w-24" />

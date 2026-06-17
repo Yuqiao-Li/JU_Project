@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 
 /**
@@ -11,6 +12,7 @@ import { useState } from "react";
  * so the markup is identical on server and client.
  */
 export function CopyLinkButton({ slug }: { slug: string }) {
+  const t = useTranslations("dashboard");
   const [copied, setCopied] = useState(false);
 
   async function copy() {
@@ -20,7 +22,7 @@ export function CopyLinkButton({ slug }: { slug: string }) {
     } catch {
       // Clipboard can be blocked (insecure context / permissions). Fall back to a
       // prompt so the host can still grab the link.
-      window.prompt("Copy this link", url);
+      window.prompt(t("copyLink.prompt"), url);
       return;
     }
     setCopied(true);
@@ -38,7 +40,7 @@ export function CopyLinkButton({ slug }: { slug: string }) {
         aria-live="polite"
         className="inline-flex h-10 shrink-0 items-center justify-center rounded-lg border border-line px-4 text-sm font-semibold text-paper transition hover:bg-surface-2"
       >
-        {copied ? "Copied" : "Copy link"}
+        {copied ? t("copyLink.copied") : t("copyLink.label")}
       </button>
     </div>
   );

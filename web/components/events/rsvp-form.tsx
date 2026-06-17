@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 
 import {
   RSVP_STATUSES,
@@ -27,10 +28,10 @@ import type { RsvpRecord } from "@/lib/events/rsvp-storage";
  * all (host-only, D6) — just a quiet notice.
  */
 
-const STATUS_LABELS: Record<RsvpStatus, string> = {
-  going: "I’m going",
-  maybe: "Maybe",
-  not_going: "Can’t go",
+const STATUS_LABEL_KEYS: Record<RsvpStatus, string> = {
+  going: "statusGoing",
+  maybe: "statusMaybe",
+  not_going: "statusNotGoing",
 };
 
 interface RsvpFormProps {
@@ -60,6 +61,7 @@ export function RsvpForm({
   initial,
   onSubmitted,
 }: RsvpFormProps) {
+  const t = useTranslations("rsvp");
   const [name, setName] = useState(initial?.display_name ?? "");
   const [status, setStatus] = useState<RsvpStatus>(coerceStatus(initial?.status));
   const [plusOnes, setPlusOnes] = useState(initial?.plus_ones ?? 0);
@@ -86,10 +88,8 @@ export function RsvpForm({
   if (!rsvpEnabled) {
     return (
       <section id="rsvp" className="mt-10 rounded-2xl border border-line bg-surface/50 p-5">
-        <p className="eyebrow">RSVP</p>
-        <p className="mt-2 text-paper/90">
-          The host turned off replies for this one — keep an eye here for updates.
-        </p>
+        <p className="eyebrow">{t("eyebrow")}</p>
+        <p className="mt-2 text-paper/90">{t("disabledNotice")}</p>
       </section>
     );
   }
@@ -108,7 +108,7 @@ export function RsvpForm({
     };
     const parsed = rsvpInputSchema.safeParse(candidate);
     if (!parsed.success) {
-      setError(parsed.error.issues[0]?.message ?? "Check the form and try again.");
+      setError(parsed.error.issues[0]?.message ?? t("errorCheckForm"));
       return;
     }
 
@@ -121,7 +121,7 @@ export function RsvpForm({
       });
 
       if (res.status === 429) {
-        setError("Too many tries — wait a moment and try again.");
+        setError(t("errorTooMany"));
         return;
       }
 
@@ -131,14 +131,14 @@ export function RsvpForm({
         const message =
           (data && typeof data === "object" && typeof (data as { message?: unknown }).message === "string"
             ? (data as { message: string }).message
-            : null) ?? "Couldn’t save your RSVP. Try again.";
+            : null) ?? t("errorSaveFailed");
         setError(message);
         return;
       }
 
       const result = rsvpResultSchema.safeParse((data as { rsvp?: unknown }).rsvp);
       if (!result.success) {
-        setError("Something went wrong saving your RSVP. Try again.");
+        setError(t("errorSaveWrong"));
         return;
       }
 
@@ -150,34 +150,30 @@ export function RsvpForm({
         contact: parsed.data.contact ?? null,
       });
     } catch {
-      setError("Something went wrong. Check your connection and try again.");
+      setError(t("errorNetwork"));
     } finally {
       setBusy(false);
     }
   }
 
   const hasReplied = confirmed != null || initial != null;
-  const submitLabel = busy ? "Saving…" : hasReplied ? "Update RSVP" : "RSVP";
+  const submitLabel = busy ? t("submitSaving") : hasReplied ? t("submitUpdate") : t("submitRsvp");
 
   return (
     <section id="rsvp" className="mt-10 rounded-2xl border border-line bg-surface/50 p-5 sm:p-6">
-      <p className="eyebrow">RSVP</p>
+      <p className="eyebrow">{t("eyebrow")}</p>
 
       {confirmed ? (
-        <p className="mt-2 font-medium text-paper">{confirmationLine(confirmed)}</p>
+        <p className="mt-2 font-medium text-paper">{confirmationLine(confirmed, t)}</p>
       ) : (
-        <p className="mt-2 text-paper/90">
-          {isFull
-            ? "This event is full — reply to join the waitlist. No account needed."
-            : "Reply to save your spot — no account needed."}
-        </p>
+        <p className="mt-2 text-paper/90">{isFull ? t("introFull") : t("intro")}</p>
       )}
 
       <form onSubmit={onSubmit} className="mt-4 space-y-4">
         {/* Status — the bold choice, tinted with the host's accent when selected. */}
         <fieldset>
-          <legend className="sr-only">Your reply</legend>
-          <div className="grid grid-cols-3 gap-2" role="radiogroup" aria-label="Your reply">
+          <legend className="sr-only">{t("yourReply")}</legend>
+          <div className="grid grid-cols-3 gap-2" role="radiogroup" aria-label={t("yourReply")}>
             {RSVP_STATUSES.map((s) => {
               const selected = status === s;
               return (
@@ -194,7 +190,7 @@ export function RsvpForm({
                   }`}
                   style={selected ? { backgroundColor: accent } : undefined}
                 >
-                  {s === "going" && isFull ? "Join waitlist" : STATUS_LABELS[s]}
+                  {s === "going" && isFull ? t("joinWaitlist") : t(STATUS_LABEL_KEYS[s])}
                 </button>
               );
             })}
@@ -204,7 +200,7 @@ export function RsvpForm({
         {/* Name — the only required field. */}
         <div>
           <label htmlFor="rsvp-name" className="block text-sm font-medium text-paper">
-            Your name
+            {t("nameLabel")}
           </label>
           <input
             id="rsvp-name"
@@ -214,7 +210,7 @@ export function RsvpForm({
             value={name}
             onChange={(e) => setName(e.target.value)}
             maxLength={80}
-            placeholder="e.g. Alex Chen"
+            placeholder={t("namePlaceholder")}
             className="mt-1.5 h-11 w-full rounded-xl border border-line bg-ink/40 px-3.5 text-paper placeholder:text-muted/60 focus-visible:border-iris"
           />
         </div>
@@ -223,7 +219,8 @@ export function RsvpForm({
         {allowPlusOnes && status === "going" && maxPlusOnes > 0 && (
           <div>
             <label htmlFor="rsvp-plus-ones" className="block text-sm font-medium text-paper">
-              Bringing anyone? <span className="text-muted">(up to {maxPlusOnes})</span>
+              {t("plusOnesLabel")}{" "}
+              <span className="text-muted">{t("plusOnesUpTo", { count: maxPlusOnes })}</span>
             </label>
             <select
               id="rsvp-plus-ones"
@@ -233,7 +230,7 @@ export function RsvpForm({
             >
               {Array.from({ length: maxPlusOnes + 1 }, (_, n) => (
                 <option key={n} value={n}>
-                  {n === 0 ? "Just me" : `+${n}`}
+                  {n === 0 ? t("plusOnesJustMe") : `+${n}`}
                 </option>
               ))}
             </select>
@@ -243,7 +240,7 @@ export function RsvpForm({
         {/* Contact — optional; host-visible metadata only, never an identity key (D1). */}
         <div>
           <label htmlFor="rsvp-contact" className="block text-sm font-medium text-paper">
-            Email or phone <span className="text-muted">(optional)</span>
+            {t("contactLabel")} <span className="text-muted">{t("contactOptional")}</span>
           </label>
           <input
             id="rsvp-contact"
@@ -253,7 +250,7 @@ export function RsvpForm({
             value={contact}
             onChange={(e) => setContact(e.target.value)}
             maxLength={200}
-            placeholder="So the host can reach you"
+            placeholder={t("contactPlaceholder")}
             className="mt-1.5 h-11 w-full rounded-xl border border-line bg-ink/40 px-3.5 text-paper placeholder:text-muted/60 focus-visible:border-iris"
           />
         </div>
@@ -283,18 +280,18 @@ function coerceStatus(value: string | undefined): RsvpStatus {
 }
 
 /** Friendly confirmation reflecting the CONFIRMED server outcome (may be waitlisted). */
-function confirmationLine(result: RsvpResult): string {
+function confirmationLine(result: RsvpResult, t: (key: string) => string): string {
   if (result.waitlisted || result.status === "waitlisted") {
-    return "You’re on the waitlist — we’ll let you know if a spot opens up.";
+    return t("confirmWaitlisted");
   }
   switch (result.status) {
     case "going":
-      return "You’re in 🎉 Update your reply anytime below.";
+      return t("confirmGoing");
     case "maybe":
-      return "Marked as maybe — change it anytime below.";
+      return t("confirmMaybe");
     case "not_going":
-      return "Got it — you’re not going. You can change your mind below.";
+      return t("confirmNotGoing");
     default:
-      return "Your reply is saved. Update it anytime below.";
+      return t("confirmDefault");
   }
 }

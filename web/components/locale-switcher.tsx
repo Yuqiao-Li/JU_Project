@@ -4,13 +4,15 @@ import { useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 
-import { LOCALE_COOKIE, locales, type Locale } from "@/i18n/config";
+import { setLocale } from "@/i18n/actions";
+import { locales, type Locale } from "@/i18n/config";
 
 const LABELS: Record<Locale, string> = { zh: "中", en: "EN" };
 
 /**
- * Language toggle. Sets the NEXT_LOCALE cookie (no URL routing) and refreshes so
- * the server re-renders in the chosen locale. Used in page headers / footers.
+ * Language toggle. Persists the locale via a server action (NEXT_LOCALE cookie,
+ * no URL routing) and refreshes so the server re-renders in the chosen locale.
+ * Used in page headers / footers.
  */
 export function LocaleSwitcher({ className = "" }: { className?: string }) {
   const active = useLocale();
@@ -20,8 +22,10 @@ export function LocaleSwitcher({ className = "" }: { className?: string }) {
 
   function choose(locale: Locale) {
     if (locale === active) return;
-    document.cookie = `${LOCALE_COOKIE}=${locale};path=/;max-age=31536000;samesite=lax`;
-    startTransition(() => router.refresh());
+    startTransition(async () => {
+      await setLocale(locale);
+      router.refresh();
+    });
   }
 
   return (

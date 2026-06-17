@@ -1,5 +1,7 @@
 "use client";
 
+import { useTranslations } from "next-intl";
+
 import {
   buildGoogleCalendarUrl,
   buildIcs,
@@ -22,6 +24,7 @@ import type { EventView } from "@/lib/events/view";
  * for a date-TBD/undated event — there is no instant to add.
  */
 export function AddToCalendar({ event }: { event: EventView }) {
+  const t = useTranslations("rsvp");
   const source = eventCalendarSource(event);
   if (!source) return null;
 
@@ -47,7 +50,7 @@ export function AddToCalendar({ event }: { event: EventView }) {
 
   return (
     <div className="mt-6 flex flex-wrap items-center gap-2.5">
-      <span className="text-sm text-muted">Add to calendar</span>
+      <span className="text-sm text-muted">{t("addToCalendar")}</span>
       <a href={googleUrl} target="_blank" rel="noopener noreferrer" className={itemClass}>
         Google
       </a>

@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useEffect, useRef, useState } from "react";
 
 import { type DatePoll as DatePollData } from "@/lib/events/date-poll";
@@ -40,6 +41,7 @@ export function DatePoll({
   /** Hand a fresh poll snapshot back to the parent after a successful vote. */
   onVoted: (poll: DatePollData) => void;
 }) {
+  const t = useTranslations("feed");
   // Local working selection, seeded from the server's record of this guest's votes.
   const [selected, setSelected] = useState<Set<string>>(() => new Set(poll.my_option_ids));
   const [busy, setBusy] = useState(false);
@@ -86,7 +88,7 @@ export function DatePoll({
         const message =
           data && typeof data === "object" && typeof (data as { message?: unknown }).message === "string"
             ? (data as { message: string }).message
-            : "Couldn’t save your vote. Try again.";
+            : t("errorVoteFailed");
         setError(message);
         return;
       }
@@ -98,7 +100,7 @@ export function DatePoll({
       }
       setSavedAt(Date.now());
     } catch {
-      setError("Something went wrong. Check your connection and try again.");
+      setError(t("errorNetwork"));
     } finally {
       setBusy(false);
     }
@@ -111,14 +113,12 @@ export function DatePoll({
 
   return (
     <section className="mt-10 rounded-2xl border border-line bg-surface/50 p-5 sm:p-6">
-      <p className="eyebrow">Pick a date</p>
+      <p className="eyebrow">{t("pickDate")}</p>
       <p className="mt-2 text-paper/90">
-        {canVote
-          ? "Check every date that works for you."
-          : "Vote on when this should happen — RSVP first to weigh in."}
+        {canVote ? t("pickDatePrompt") : t("pickDatePromptLocked")}
       </p>
 
-      <ul className="mt-4 space-y-2" role="group" aria-label="Candidate dates">
+      <ul className="mt-4 space-y-2" role="group" aria-label={t("candidateDates")}>
         {poll.options.map((o) => {
           const checked = selected.has(o.id);
           return (
@@ -139,7 +139,7 @@ export function DatePoll({
                 />
                 <span className="min-w-0 flex-1 text-paper">{formatOptionWhen(o.starts_at, o.ends_at)}</span>
                 <span className="shrink-0 text-sm text-muted">
-                  {o.votes} {o.votes === 1 ? "vote" : "votes"}
+                  {t("voteCount", { count: o.votes })}
                 </span>
               </label>
             </li>
@@ -163,16 +163,19 @@ export function DatePoll({
             className="inline-flex h-11 items-center justify-center rounded-xl bg-coral px-5 font-semibold text-ink transition hover:brightness-105 disabled:opacity-60"
             style={!busy && dirty ? { backgroundColor: accent } : undefined}
           >
-            {busy ? "Saving…" : "Save vote"}
+            {busy ? t("saving") : t("saveVote")}
           </button>
-          {savedAt > 0 && !dirty && <span className="text-sm text-muted">Saved.</span>}
+          {savedAt > 0 && !dirty && <span className="text-sm text-muted">{t("saved")}</span>}
         </div>
       ) : (
-        <p className="mt-4">
-          <a href="#rsvp" className="text-sm font-medium text-iris underline-offset-2 hover:underline">
-            RSVP
-          </a>{" "}
-          <span className="text-sm text-muted">to vote on the date.</span>
+        <p className="mt-4 text-sm text-muted">
+          {t.rich("rsvpToVote", {
+            rsvp: (chunks) => (
+              <a href="#rsvp" className="font-medium text-iris underline-offset-2 hover:underline">
+                {chunks}
+              </a>
+            ),
+          })}
         </p>
       )}
     </section>
