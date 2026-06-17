@@ -1,4 +1,5 @@
 import { AddToCalendar } from "@/components/events/add-to-calendar";
+import { spotsLeftLabel } from "@/lib/events/capacity";
 import { formatEventWhen } from "@/lib/events/format";
 import { themeColorFromJson, themeSwatch } from "@/lib/events/theme";
 import type { EventView } from "@/lib/events/view";
@@ -47,7 +48,8 @@ export function EventView({
 
   const hasCount = typeof event.going_count === "number";
   const remaining = event.capacity_remaining; // number | null | undefined
-  const isFull = remaining === 0;
+  // Single source for "还剩 X 位 / 已满—等待名单" (shared with the host stat, task 3.2).
+  const capacityLine = spotsLeftLabel(remaining);
 
   return (
     <article className="mx-auto w-full max-w-2xl px-5 py-10 sm:px-8 sm:py-14">
@@ -55,7 +57,7 @@ export function EventView({
       <Hero event={event} accent={accent} when={when} isPrivate={isPrivate} />
 
       {/* ── Headcount (first tier, only when the RPC returned counts) ─────────── */}
-      {(hasCount || remaining != null) && (
+      {(hasCount || capacityLine) && (
         <div className="mt-6 flex flex-wrap items-center gap-2.5">
           {hasCount && (
             <span className="inline-flex items-center gap-2 rounded-full border border-line bg-surface/60 px-3.5 py-1.5 text-sm text-paper">
@@ -67,9 +69,9 @@ export function EventView({
               <strong className="font-semibold">{event.going_count}</strong> going
             </span>
           )}
-          {remaining != null && (
+          {capacityLine && (
             <span className="inline-flex items-center rounded-full border border-line bg-surface/60 px-3.5 py-1.5 text-sm text-muted">
-              {isFull ? "Full — join the waitlist" : `${remaining} ${remaining === 1 ? "spot" : "spots"} left`}
+              {capacityLine}
             </span>
           )}
         </div>

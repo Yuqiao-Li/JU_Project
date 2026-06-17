@@ -2,8 +2,11 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
 import { CopyLinkButton } from "@/components/events/copy-link-button";
+import { goingOccupancy, remainingSpots } from "@/lib/events/capacity";
 import { formatEventWhen } from "@/lib/events/format";
 import { createClient } from "@/lib/supabase/server";
+
+import { PromoteButton } from "./promote-button";
 
 /**
  * Host event detail (task 2.3).
@@ -59,9 +62,11 @@ export default async function HostEventDetailPage({ params }: { params: Promise<
   const declined = rsvps.filter((r) => r.status === "not_going");
   const waitlist = rsvps.filter((r) => r.status === "waitlisted");
 
-  // Live headcount: each going RSVP occupies 1 + its plus-ones.
-  const goingCount = going.reduce((sum, r) => sum + 1 + (r.plus_ones ?? 0), 0);
-  const remaining = event.capacity != null ? Math.max(0, event.capacity - goingCount) : null;
+  // Live headcount + remaining seats from the shared capacity helper (task 3.2): each
+  // going RSVP occupies 1 + its plus-ones; remaining is null when there's no cap.
+  const goingCount = goingOccupancy(rsvps);
+  const remaining = remainingSpots(event.capacity, goingCount);
+  const isFull = remaining === 0;
 
   return (
     <div className="mx-auto w-full max-w-2xl flex-1 px-5 py-12 sm:px-8">
@@ -102,9 +107,16 @@ export default async function HostEventDetailPage({ params }: { params: Promise<
         <Stat label="Maybe" value={String(maybe.length)} />
         <Stat
           label={event.capacity != null ? "Spots left" : "Capacity"}
-          value={event.capacity != null ? String(remaining) : "No limit"}
+          value={event.capacity == null ? "No limit" : isFull ? "Full" : String(remaining)}
         />
       </section>
+
+      {isFull && (
+        <p className="mt-3 text-sm text-muted">
+          This event is full — new replies join the waitlist. Promote a waitlisted guest below to open
+          their spot.
+        </p>
+      )}
 
       <section className="mt-10">
         <h2 className="eyebrow">Guest list</h2>
@@ -121,10 +133,24 @@ export default async function HostEventDetailPage({ params }: { params: Promise<
 
       {waitlist.length > 0 && (
         <section className="mt-10">
-          <h2 className="eyebrow">Waitlist</h2>
-          <div className="mt-4">
-            <GuestGroup status="waitlisted" rows={waitlist} hideHeading />
-          </div>
+          <h2 className="eyebrow">Waitlist · {waitlist.length}</h2>
+          <p className="mt-1 text-sm text-muted">
+            In line if a spot opens. Move someone up when there’s room.
+          </p>
+          <ul className="mt-4 divide-y divide-line/60 rounded-xl border border-line bg-surface/40">
+            {waitlist.map((r) => (
+              <li key={r.id} className="flex items-center justify-between gap-3 px-4 py-3">
+                <div className="min-w-0">
+                  <p className="truncate text-paper">
+                    {r.guests?.display_name ?? "Guest"}
+                    {r.plus_ones > 0 && <span className="ml-1 text-sm text-muted">+{r.plus_ones}</span>}
+                  </p>
+                  {r.guests?.contact && <p className="truncate text-sm text-muted">{r.guests.contact}</p>}
+                </div>
+                <PromoteButton rsvpId={r.id} eventId={event.id} />
+              </li>
+            ))}
+          </ul>
         </section>
       )}
     </div>
