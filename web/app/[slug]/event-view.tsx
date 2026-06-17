@@ -1,0 +1,190 @@
+import { formatEventWhen } from "@/lib/events/format";
+import { themeColorFromJson, themeSwatch } from "@/lib/events/theme";
+import type { EventView } from "@/lib/events/view";
+
+/**
+ * Public event view (task 2.4a) — the shared, presentational render of an event's
+ * tiered façade. Rendered by the SSR `/{slug}` page (server) AND, after a correct
+ * password, by the client password gate. NO interactivity lives here: the RSVP form
+ * and the token-driven unlock land in task 2.4b; this component only renders whatever
+ * tier the payload already carries.
+ *
+ * STRICT TIERING — the security-bearing part (DESIGN-TONE: "未 RSVP 真实地不渲染地址").
+ * The full address (`location_text`) is rendered ONLY when the payload reports
+ * `unlocked` AND actually carries it. When the viewer is locked the DATA LAYER never
+ * returns it (get_event_by_slug omits second-tier fields), so there is nothing here to
+ * hide with CSS — we show the city (first tier) and a prompt to RSVP for the exact
+ * address. Counts render only when the RPC included them; hide_guest_count and the
+ * private-unlocked rule omit the keys entirely (D7②), so a missing key reads as hidden.
+ *
+ * The host's accent color (events.theme.color) personalizes the hero — DESIGN-TONE's
+ * one place to "spend the boldness": the poster.
+ */
+export function EventView({ event }: { event: EventView }) {
+  const accent = themeSwatch(themeColorFromJson(event.theme)).hex;
+  const when = formatEventWhen(event.starts_at ?? null, event.date_tbd ?? false);
+  const isPrivate = event.visibility === "private";
+
+  // Address tier: only ever the full text when the payload says unlocked AND carries
+  // it. Otherwise the city (first tier) is all there is to show.
+  const fullAddress = event.unlocked ? event.location_text ?? null : null;
+  const mapUrl = event.unlocked ? event.location_url ?? null : null;
+
+  const hasCount = typeof event.going_count === "number";
+  const remaining = event.capacity_remaining; // number | null | undefined
+  const isFull = remaining === 0;
+
+  return (
+    <article className="mx-auto w-full max-w-2xl px-5 py-10 sm:px-8 sm:py-14">
+      {/* ── Hero / poster: the signature element ─────────────────────────────── */}
+      <Hero event={event} accent={accent} when={when} isPrivate={isPrivate} />
+
+      {/* ── Headcount (first tier, only when the RPC returned counts) ─────────── */}
+      {(hasCount || remaining != null) && (
+        <div className="mt-6 flex flex-wrap items-center gap-2.5">
+          {hasCount && (
+            <span className="inline-flex items-center gap-2 rounded-full border border-line bg-surface/60 px-3.5 py-1.5 text-sm text-paper">
+              <span
+                aria-hidden
+                className="size-2 rounded-full"
+                style={{ backgroundColor: accent }}
+              />
+              <strong className="font-semibold">{event.going_count}</strong> going
+            </span>
+          )}
+          {remaining != null && (
+            <span className="inline-flex items-center rounded-full border border-line bg-surface/60 px-3.5 py-1.5 text-sm text-muted">
+              {isFull ? "Full — join the waitlist" : `${remaining} ${remaining === 1 ? "spot" : "spots"} left`}
+            </span>
+          )}
+        </div>
+      )}
+
+      {/* ── Where ────────────────────────────────────────────────────────────── */}
+      <Section title="Where">
+        {fullAddress ? (
+          <div className="space-y-1">
+            <p className="text-paper">{fullAddress}</p>
+            {mapUrl && (
+              <a
+                href={mapUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-block text-sm font-medium text-iris underline-offset-2 hover:underline"
+              >
+                Open map
+              </a>
+            )}
+          </div>
+        ) : event.location_city ? (
+          <div className="space-y-1">
+            <p className="text-paper">{event.location_city}</p>
+            {event.rsvp_enabled !== false && (
+              <p className="text-sm text-muted">RSVP to see the exact address.</p>
+            )}
+          </div>
+        ) : (
+          <p className="text-muted">Location to be shared.</p>
+        )}
+      </Section>
+
+      {/* ── About ────────────────────────────────────────────────────────────── */}
+      {event.description && (
+        <Section title="About">
+          <p className="whitespace-pre-wrap leading-relaxed text-paper/90">{event.description}</p>
+        </Section>
+      )}
+
+      {/* ── Chip in (display only — never an obligation, D: chip_in 纯展示) ────── */}
+      {event.chip_in_url && (
+        <Section title="Chip in">
+          {event.chip_in_note && <p className="text-paper/90">{event.chip_in_note}</p>}
+          <a
+            href={event.chip_in_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-2 inline-flex h-10 items-center justify-center rounded-lg border border-line px-4 text-sm font-medium text-paper transition hover:bg-surface-2"
+          >
+            Chip in
+          </a>
+        </Section>
+      )}
+
+      {/* ── RSVP ──────────────────────────────────────────────────────────────
+          The RSVP form (name + status + optional +1/contact, guest_token, waitlist)
+          mounts here in task 2.4b. It re-reads get_event_by_slug(token) on success to
+          reveal the unlocked view above. This shell only states the current standing. */}
+      <section id="rsvp" className="mt-10 rounded-2xl border border-line bg-surface/50 p-5">
+        <p className="eyebrow">RSVP</p>
+        {event.rsvp_enabled === false ? (
+          <p className="mt-2 text-paper/90">
+            The host turned off replies for this one — keep an eye here for updates.
+          </p>
+        ) : (
+          <p className="mt-2 text-paper/90">
+            {isFull
+              ? "This event is full. Reply to join the waitlist."
+              : "Reply to save your spot — no account needed."}
+          </p>
+        )}
+      </section>
+    </article>
+  );
+}
+
+/** Poster hero: cover image (or a themed gradient), with title/host/when/city. */
+function Hero({
+  event,
+  accent,
+  when,
+  isPrivate,
+}: {
+  event: EventView;
+  accent: string;
+  when: string;
+  isPrivate: boolean;
+}) {
+  const cover = event.cover_image_url ?? null;
+  const surface = cover
+    ? { backgroundImage: `url(${JSON.stringify(cover)})` }
+    : {
+        backgroundImage: `radial-gradient(120% 120% at 20% 0%, ${accent}66, transparent 60%), radial-gradient(120% 120% at 90% 20%, ${accent}33, transparent 55%)`,
+      };
+
+  return (
+    <div
+      className="relative flex min-h-[15rem] flex-col justify-end overflow-hidden rounded-3xl border border-line bg-surface bg-cover bg-center p-6 sm:min-h-[18rem] sm:p-8"
+      style={surface}
+    >
+      {/* Scrim for legible text over any cover. */}
+      <div aria-hidden className="absolute inset-0 bg-gradient-to-t from-ink via-ink/55 to-transparent" />
+      <div className="relative">
+        <div className="flex flex-wrap items-center gap-2 text-sm text-muted">
+          {event.host_display_name && <span>Hosted by {event.host_display_name}</span>}
+          {isPrivate && (
+            <span className="rounded-full border border-line bg-ink/50 px-2.5 py-0.5 text-xs text-muted backdrop-blur">
+              Private
+            </span>
+          )}
+        </div>
+        <h1 className="mt-2 text-balance font-display text-3xl font-extrabold leading-tight text-paper sm:text-4xl">
+          {event.title}
+        </h1>
+        <p className="mt-2 font-medium" style={{ color: accent }}>
+          {when}
+        </p>
+        {event.location_city && <p className="mt-0.5 text-muted">{event.location_city}</p>}
+      </div>
+    </div>
+  );
+}
+
+/** A titled content block with the app's eyebrow label. */
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <section className="mt-8">
+      <h2 className="eyebrow">{title}</h2>
+      <div className="mt-2">{children}</div>
+    </section>
+  );
+}

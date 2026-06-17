@@ -1,0 +1,52 @@
+import { z } from "zod";
+
+/**
+ * The shape `get_event_by_slug` returns — the single public façade of an event.
+ *
+ * Extracted here (no `server-only`) so it can be shared by the trusted server read
+ * (`read-event.ts`) AND by the client components that render an event (the public
+ * `/{slug}` page, the password gate). Importing the TYPE into the client never pulls
+ * a trusted-role module along with it.
+ *
+ * All sensitive/conditional fields are optional because the RPC OMITS them
+ * (省略而非置0) when the caller isn't entitled: `location_text`/`location_url` only
+ * appear once unlocked (second tier); `going_count`/`capacity_remaining` only when the
+ * count rule permits (D7②). A password-locked event returns only the minimal locked
+ * subset (title/cover/description/…), so most keys are absent then too. Unknown keys
+ * are stripped by zod's default strip — defence in depth against a third-tier field
+ * (contact, other tokens, raw hash, Can't-Go list, answers) ever appearing here.
+ */
+export const eventViewSchema = z.object({
+  id: z.string().optional(),
+  slug: z.string(),
+  title: z.string(),
+  description: z.string().nullable().optional(),
+  cover_image_url: z.string().nullable().optional(),
+  theme: z.unknown().optional(),
+  effect: z.string().nullable().optional(),
+  location_city: z.string().nullable().optional(),
+  location_text: z.string().nullable().optional(),
+  location_url: z.string().nullable().optional(),
+  starts_at: z.string().nullable().optional(),
+  ends_at: z.string().nullable().optional(),
+  date_tbd: z.boolean().optional(),
+  host_display_name: z.string().nullable().optional(),
+  rsvp_enabled: z.boolean().optional(),
+  visibility: z.string(),
+  capacity: z.number().nullable().optional(),
+  allow_plus_ones: z.boolean().optional(),
+  max_plus_ones: z.number().optional(),
+  hide_guest_list: z.boolean().optional(),
+  hide_guest_count: z.boolean().optional(),
+  hide_feed_timestamps: z.boolean().optional(),
+  chip_in_url: z.string().nullable().optional(),
+  chip_in_note: z.string().nullable().optional(),
+  status: z.string().optional(),
+  requires_password: z.boolean().optional(),
+  locked: z.boolean().optional(),
+  unlocked: z.boolean().optional(),
+  going_count: z.number().optional(),
+  capacity_remaining: z.number().nullable().optional(),
+});
+
+export type EventView = z.infer<typeof eventViewSchema>;
