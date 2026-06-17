@@ -148,7 +148,7 @@
 
 ## Phase 3 — 名单展示 + 容量/waitlist UI
 
-- [ ] **3.1 [SECURITY] 公开页名单** 【🟢】
+- [x] **3.1 [SECURITY] 公开页名单** 【🟢】
   - /{slug} 经 get_guest_list 渲染(遵守 hide_guest_list/hide_guest_count)。Going/Maybe 分组,显 +1。**轮询/重取(非 Realtime,D4)**:可见性感知轮询,只调分级 RPC。**只对已解锁可见。**
   - 【禁止】不展示 Can't Go/contact;未解锁不可见;不给 anon 开原表 SELECT。 【验收/测试】见 TEST-SPEC §3.1。
 
