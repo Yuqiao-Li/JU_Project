@@ -116,7 +116,7 @@
   - /dashboard/events/new 与 [id]/edit。字段:标题、描述、日期(+TBD)、地点(text+url+city)、可见性、容量、+1、RSVP开关、**密码(可选,设/清)**。create 生成 slug(event_hosts owner 行由触发器自动)。草稿→发布。zod 校验。
   - 【禁止】问卷/co-host/审核等 🟡 不做 UI。 【验收】建活动→发布→得 /{slug};host 立刻能读自己刚建的活动。 【测试】集成:生成合法唯一 slug;host 读回自己活动。
 
-- [ ] **2.2b 建/改活动 — 封面 + 主题 + chip_in** 【🟢】
+- [x] **2.2b 建/改活动 — 封面 + 主题 + chip_in** 【🟢】
   - 封面上传 **event-covers 桶**(经 storage RLS);主题色 + 适度特效;chip_in 链接 + 说明。
   - 【禁止】特效不堆砌;chip_in 纯展示;封面上传走桶 RLS。 【验收】可传封面、选主题、填 chip_in。 【测试】见 Storage 授权断言。
 
