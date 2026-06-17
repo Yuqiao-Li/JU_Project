@@ -86,7 +86,7 @@
   - get_comments 读开放(沿用 D3 可见性闸);add_comment 写门禁=helper、**作者服务端绑定**、rsvp_enabled=false → 仅 host、不写 gif(D6)。
   - 【禁止】未解锁不得发;不得信 client 传 author id;不接外部 GIF。 【测试】§1.5d / §4.1。
 
-- [ ] **1.5e [SECURITY] vote/finalize/promote + 聚合读**(0005f)【🟢】
+- [x] **1.5e [SECURITY] vote/finalize/promote + 聚合读**(0005f)【🟢】
   - vote_dates(多选 upsert);finalize_date/promote_guest(**host-only:auth.uid()=host_id 否则 raise,须 host auth 上下文**,D7③);get_my_events(D1)、get_public_events_by_host(D2)。
   - 【禁止】非 host 不得 finalize/promote;聚合读只返回应公开的。 【测试】§1.5e。
 
