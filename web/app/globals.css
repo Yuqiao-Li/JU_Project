@@ -22,8 +22,11 @@
   --color-amber: #ffb14e; /* warm gradient partner */
   --color-iris: #9b8cff; /* cool counter-accent — links, focus */
 
-  --font-display: var(--font-display-face), ui-sans-serif, system-ui, sans-serif;
-  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  /* CJK fallbacks: the Latin display/body faces carry no Chinese glyphs, so
+   * Chinese text renders in the system CJK font (PingFang on Apple, YaHei on
+   * Windows, Noto on Linux/Android). Audience is Chinese-first. */
+  --font-display: var(--font-display-face), "PingFang SC", "Microsoft YaHei", "Noto Sans SC", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-geist-sans), "PingFang SC", "Microsoft YaHei", "Noto Sans SC", ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
 }
 

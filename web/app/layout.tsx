@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { Bricolage_Grotesque, Geist, Geist_Mono } from "next/font/google";
+import { NextIntlClientProvider } from "next-intl";
+import { getLocale, getTranslations } from "next-intl/server";
 
 import "./globals.css";
 
@@ -14,30 +16,37 @@ const geistMono = Geist_Mono({
 });
 
 // Characterful display face — used with restraint for the wordmark + titles.
-// Deliberately not the body family (DESIGN-TONE / frontend-design).
+// Deliberately not the body family (DESIGN-TONE / frontend-design). It has no CJK
+// glyphs, so Chinese display text falls back to the system CJK stack in globals.css.
 const displayFace = Bricolage_Grotesque({
   variable: "--font-display-face",
   subsets: ["latin"],
   weight: ["600", "700", "800"],
 });
 
-export const metadata: Metadata = {
-  title: "Partiful — throw something good",
-  description:
-    "Make an event, share a link, watch the yeses roll in. Guests RSVP without an account.",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("metadata");
+  return {
+    title: t("title"),
+    description: t("description"),
+  };
+}
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const locale = await getLocale();
+
   return (
     <html
-      lang="en"
+      lang={locale}
       className={`${geistSans.variable} ${geistMono.variable} ${displayFace.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        <NextIntlClientProvider>{children}</NextIntlClientProvider>
+      </body>
     </html>
   );
 }
