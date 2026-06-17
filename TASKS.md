@@ -160,7 +160,7 @@
 
 ## Phase 4 — Activity Feed
 
-- [ ] **4.1 [SECURITY] 评论 UI**(RPC 在 1.5d)【🟢】
+- [x] **4.1 [SECURITY] 评论 UI**(RPC 在 1.5d)【🟢】
   - /{slug} 评论流(时间正序),经 **get_comments**。**读开放**:未RSVP可读。**写门禁**:仅已解锁(token/账号)和 host;未解锁点发提示"先RSVP才能评"。**rsvp_enabled=false → host-only**(guest 隐藏输入框)。**轮询(非 Realtime)**。MVP 纯文本(无 GIF)。
   - 【禁止】未解锁不得发;不接外部 GIF;不给 anon 开 comments 原表。 【验收/测试】见 TEST-SPEC §4.1。
 
