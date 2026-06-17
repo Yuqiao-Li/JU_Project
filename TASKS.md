@@ -94,7 +94,7 @@
   - slugify(前40)-{10位base62},gen_random_bytes,中文/空标题纯随机段,**冲突重试一次、再冲突 fail-closed raise**(D15)。
   - 【禁止】禁 random()/时间戳/自增。 【测试】单元:随机段长=10、纯中文输出纯随机段、不重复、不含禁用字符、二次冲突 raise。
 
-- [ ] **1.7 Storage buckets + RLS** 【🟢】
+- [x] **1.7 Storage buckets + RLS** 【🟢】
   - 建 `event-covers`(公开读/host 写)、`event-photos`(私有);storage.objects RLS(写=authenticated 且拥有 event 且路径前缀);bucket `allowed_mime_types` + `file_size_limit`(D16)。
   - 【禁止】anon 不得写;相册不得公开读。 【验收】桶建好、RLS 生效。 【测试】见 TEST-SPEC(Storage 授权)。
 
