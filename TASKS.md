@@ -124,7 +124,7 @@
   - **按 Partiful**:/dashboard 是统一"你的活动"feed —— **我主办(host_id)+ 我参加(经 get_my_events,guests.user_id)**,upcoming/past 分组,host/going 视觉区分。活动详情页:公开链接+复制、实时人数、**完整名单(host 见全部含 contact)**、waitlist 单列。
   - 【禁止】不串其他 host 的活动。 【验收】host 见自己主办+参加的活动+人数+复制。 【测试】集成:get_my_events 只返回自己的;dashboard 只返回该 host 主办活动。
 
-- [ ] **2.3.5 [SECURITY] 限流 + 私密收敛基础设施**(先于核心页)【🟢 MVP 必做】
+- [x] **2.3.5 [SECURITY] 限流 + 私密收敛基础设施**(先于核心页)【🟢 MVP 必做】
   - Next 层 + Upstash 读侧限流(真实 IP 来自 Vercel);**已RSVP/受信轮询走更宽松配额、间隔对齐窗口**(D4/D14)。私密读取只走 Next SSR(受信角色),anon 不可直打 private RPC。**密码尝试独立限流**(D7amend)。
   - 【禁止】限流不得放 Postgres 读侧;不得因取不到 IP 形同虚设;private 不得对 anon 裸奔。 【验收】见 TEST-SPEC §2.3.5。 【测试】§2.3.5。
 
