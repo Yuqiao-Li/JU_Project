@@ -4,10 +4,10 @@ import type { EventView } from "@/lib/events/view";
 
 /**
  * Public event view (task 2.4a) — the shared, presentational render of an event's
- * tiered façade. Rendered by the SSR `/{slug}` page (server) AND, after a correct
- * password, by the client password gate. NO interactivity lives here: the RSVP form
- * and the token-driven unlock land in task 2.4b; this component only renders whatever
- * tier the payload already carries.
+ * tiered façade. Rendered (via the client `EventClient` shell) by the SSR `/{slug}`
+ * page AND, after a correct password, by the client password gate. This component is
+ * presentational only: it renders whatever tier the payload already carries and slots
+ * in the RSVP interaction (`rsvpSlot`, task 2.4b) where the standing used to be.
  *
  * STRICT TIERING — the security-bearing part (DESIGN-TONE: "未 RSVP 真实地不渲染地址").
  * The full address (`location_text`) is rendered ONLY when the payload reports
@@ -20,7 +20,14 @@ import type { EventView } from "@/lib/events/view";
  * The host's accent color (events.theme.color) personalizes the hero — DESIGN-TONE's
  * one place to "spend the boldness": the poster.
  */
-export function EventView({ event }: { event: EventView }) {
+export function EventView({
+  event,
+  rsvpSlot,
+}: {
+  event: EventView;
+  /** The RSVP interaction (client), slotted in by `EventClient`. */
+  rsvpSlot?: React.ReactNode;
+}) {
   const accent = themeSwatch(themeColorFromJson(event.theme)).hex;
   const when = formatEventWhen(event.starts_at ?? null, event.date_tbd ?? false);
   const isPrivate = event.visibility === "private";
@@ -112,22 +119,9 @@ export function EventView({ event }: { event: EventView }) {
 
       {/* ── RSVP ──────────────────────────────────────────────────────────────
           The RSVP form (name + status + optional +1/contact, guest_token, waitlist)
-          mounts here in task 2.4b. It re-reads get_event_by_slug(token) on success to
-          reveal the unlocked view above. This shell only states the current standing. */}
-      <section id="rsvp" className="mt-10 rounded-2xl border border-line bg-surface/50 p-5">
-        <p className="eyebrow">RSVP</p>
-        {event.rsvp_enabled === false ? (
-          <p className="mt-2 text-paper/90">
-            The host turned off replies for this one — keep an eye here for updates.
-          </p>
-        ) : (
-          <p className="mt-2 text-paper/90">
-            {isFull
-              ? "This event is full. Reply to join the waitlist."
-              : "Reply to save your spot — no account needed."}
-          </p>
-        )}
-      </section>
+          slots in here from EventClient. It re-reads the event with the token on
+          success to reveal the unlocked view above (task 2.4b). */}
+      {rsvpSlot}
     </article>
   );
 }

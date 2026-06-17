@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { EventView } from "./event-view";
+import { EventClient } from "./event-client";
 import { PasswordGate } from "./password-gate";
 import { readEventBySlug } from "@/lib/events/read-event";
 
@@ -16,11 +16,12 @@ import { readEventBySlug } from "@/lib/events/read-event";
  * therefore never has to trust the client for the private gate.
  *
  * STRICT TIERING. At SSR there is no guest_token (it lives in the browser's
- * localStorage), so the page always renders the FIRST tier: title, host, date, city,
- * counts. The full address and guest list are second-tier — the data layer doesn't
- * return them here, so they can't be in the SSR HTML (TEST-SPEC §2.4: the location
- * sentinel must be absent until an RSVP unlocks it). The token-driven re-read that
- * reveals the address, and the RSVP form that mints the token, arrive in task 2.4b.
+ * localStorage), so the SSR HTML always carries only the FIRST tier: title, host, date,
+ * city, counts. The full address and guest list are second-tier — the data layer
+ * doesn't return them here, so they can't be in the SSR HTML (TEST-SPEC §2.4: the
+ * location sentinel must be absent until an RSVP unlocks it). The client `EventClient`
+ * shell then runs the RSVP form (which mints the token) and the token-driven re-read
+ * that reveals the address — all client-side, so the initial SSR payload stays locked.
  *
  * PASSWORD. A password-protected event comes back as the minimal locked façade
  * (`locked: true`); we hand it to <PasswordGate>, which verifies via the rate-limited
@@ -54,7 +55,7 @@ export default async function PublicEventPage({
           description={event.description ?? null}
         />
       ) : (
-        <EventView event={event} />
+        <EventClient slug={slug} initialEvent={event} />
       )}
 
       <footer className="mt-auto px-5 py-8 text-center">

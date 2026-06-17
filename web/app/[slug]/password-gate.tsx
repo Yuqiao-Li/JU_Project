@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-import { EventView } from "./event-view";
+import { EventClient } from "./event-client";
 import type { EventView as EventViewData } from "@/lib/events/view";
 
 /**
@@ -18,11 +18,13 @@ import type { EventView as EventViewData } from "@/lib/events/view";
  * the attempt (per IP+event) and bcrypt-verifies via the trusted role BEFORE doing any
  * work (D7amend — blunts brute force AND bcrypt-DoS). On success that endpoint returns
  * the now-unlocked façade (still first-tier only — a correct password reveals the
- * poster, not the address; the address needs an RSVP token), which we render in place.
- * The password travels only in the POST body, never a URL.
+ * poster, not the address; the address needs an RSVP token), which we hand to
+ * `EventClient` so the guest can RSVP from here too. The password travels only in the
+ * POST body, never a URL.
  *
- * The persistent short-lived signed credential (so a reload/poll skips re-hashing) is
- * task 2.5; here a correct password reveals the event for this view.
+ * The persistent short-lived signed credential (so a reload/poll — and the post-RSVP
+ * address re-read — skips re-hashing) is task 2.5; until then a correct password
+ * reveals the first tier for this view and the RSVP form works (RSVP needs no password).
  */
 export function PasswordGate({
   slug,
@@ -40,7 +42,7 @@ export function PasswordGate({
   const [error, setError] = useState<string | null>(null);
   const [unlocked, setUnlocked] = useState<EventViewData | null>(null);
 
-  if (unlocked) return <EventView event={unlocked} />;
+  if (unlocked) return <EventClient slug={slug} initialEvent={unlocked} />;
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
