@@ -2,5 +2,14 @@
   "metadata": {
     "title": "Partiful — throw something good",
     "description": "Make an event, share a link, watch the yeses roll in. Guests RSVP without an account."
+  },
+  "common": {
+    "language": "Language"
+  },
+  "home": {
+    "tagline": "Throw something good.",
+    "subtitle": "Make an event, share one link, and watch the yeses roll in. Your guests RSVP in seconds — no account, no app.",
+    "cta": "Start hosting",
+    "note": "Hosting needs an account; guests never sign in."
   }
 }
