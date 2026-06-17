@@ -120,7 +120,7 @@
   - 封面上传 **event-covers 桶**(经 storage RLS);主题色 + 适度特效;chip_in 链接 + 说明。
   - 【禁止】特效不堆砌;chip_in 纯展示;封面上传走桶 RLS。 【验收】可传封面、选主题、填 chip_in。 【测试】见 Storage 授权断言。
 
-- [ ] **2.3 统一首页 / dashboard(我主办 + 我参加)** 【🟢】
+- [x] **2.3 统一首页 / dashboard(我主办 + 我参加)** 【🟢】
   - **按 Partiful**:/dashboard 是统一"你的活动"feed —— **我主办(host_id)+ 我参加(经 get_my_events,guests.user_id)**,upcoming/past 分组,host/going 视觉区分。活动详情页:公开链接+复制、实时人数、**完整名单(host 见全部含 contact)**、waitlist 单列。
   - 【禁止】不串其他 host 的活动。 【验收】host 见自己主办+参加的活动+人数+复制。 【测试】集成:get_my_events 只返回自己的;dashboard 只返回该 host 主办活动。
 
