@@ -45,6 +45,21 @@ const DAY_KEY_FMT = new Intl.DateTimeFormat("en-CA", {
   day: "2-digit",
 });
 
+// A start-but-no-end event is treated as ~6h long before it counts as "ended", so a
+// just-started party isn't immediately marked over (audit H3/H4).
+const ENDED_GRACE_MS = 6 * 60 * 60 * 1000;
+
+/** Whether the event is over: a concrete end in the past, or a no-end event well past start. */
+export function isEventEnded(startsAt: string | null, endsAt: string | null, dateTbd: boolean): boolean {
+  if (dateTbd) return false;
+  const raw = endsAt ?? startsAt;
+  if (!raw) return false;
+  const ms = Date.parse(raw);
+  if (Number.isNaN(ms)) return false;
+  const effectiveEnd = endsAt ? ms : ms + ENDED_GRACE_MS;
+  return effectiveEnd < Date.now();
+}
+
 /** "When" line for a card: a date-TBD event reads "Date TBD"; an undated one too. */
 export function formatEventWhen(startsAt: string | null, dateTbd: boolean): string {
   if (dateTbd || !startsAt) return TBD;

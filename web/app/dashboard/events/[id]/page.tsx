@@ -7,6 +7,7 @@ import { goingOccupancy, remainingSpots } from "@/lib/events/capacity";
 import { formatEventWhen } from "@/lib/events/format";
 import { createClient } from "@/lib/supabase/server";
 
+import { EventLifecycle } from "./event-lifecycle";
 import { PromoteButton } from "./promote-button";
 
 /**
@@ -99,10 +100,27 @@ export default async function HostEventDetailPage({ params }: { params: Promise<
         </Link>
       </div>
 
+      <div className="mt-3">
+        <EventLifecycle eventId={event.id} status={event.status} />
+      </div>
+
       <section className="mt-8 rounded-2xl border border-line bg-surface/60 p-5">
         <p className="text-sm text-muted">{t("publicLinkHint")}</p>
-        <div className="mt-3">
+        {event.status !== "published" && (
+          <p className="mt-2 text-sm text-amber">{t("draftLinkHint")}</p>
+        )}
+        <div className="mt-3 flex flex-wrap items-center gap-3">
           <CopyLinkButton slug={event.slug} />
+          {event.status === "published" && (
+            <a
+              href={`/${event.slug}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sm font-medium text-iris underline-offset-2 hover:underline"
+            >
+              {t("previewAsGuest")}
+            </a>
+          )}
         </div>
       </section>
 

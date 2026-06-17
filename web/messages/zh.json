@@ -156,7 +156,18 @@
     "statusNotGoing": "不能去",
     "statusWaitlisted": "候补",
     "moving": "处理中…",
-    "moveToGoing": "转为参加"
+    "moveToGoing": "转为参加",
+    "publish": "发布活动",
+    "unpublish": "转为草稿",
+    "unpublishConfirm": "转为草稿后，已分享的链接会暂时打不开（访客看到「找不到」）。确定吗？",
+    "cancelEvent": "取消活动",
+    "cancelConfirm": "取消后，访客会看到「活动已取消」、无法再回复。确定取消吗？",
+    "republish": "重新发布",
+    "deleteEvent": "删除活动",
+    "deleteConfirm": "删除无法恢复，所有回复和评论都会一并删除。确定删除吗？",
+    "actionFailed": "操作失败，请重试。",
+    "previewAsGuest": "以访客身份预览",
+    "draftLinkHint": "活动还是草稿——发布后这个链接才对访客生效。"
   },
   "settings": {
     "backToEvents": "返回活动",
@@ -186,7 +197,9 @@
     "chipInTitle": "凑份子",
     "chipInButton": "凑一份",
     "hostedBy": "{name} 发起",
-    "privateBadge": "私密"
+    "privateBadge": "私密",
+    "cancelledBanner": "活动已取消",
+    "endedBanner": "活动已结束"
   },
   "rsvp": {
     "eyebrow": "回复",

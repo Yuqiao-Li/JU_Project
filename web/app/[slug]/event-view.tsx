@@ -26,12 +26,15 @@ import type { EventView } from "@/lib/events/view";
  */
 export function EventView({
   event,
+  ended,
   rsvpSlot,
   pollSlot,
   guestListSlot,
   commentsSlot,
 }: {
   event: EventView;
+  /** True when the event's time has passed (audit H4) — gates RSVP/voting/calendar. */
+  ended?: boolean;
   /** The RSVP interaction (client), slotted in by `EventClient`. */
   rsvpSlot?: React.ReactNode;
   /**
@@ -57,6 +60,10 @@ export function EventView({
   const accent = themeSwatch(themeColorFromJson(event.theme)).hex;
   const when = formatEventWhen(event.starts_at ?? null, event.date_tbd ?? false);
   const isPrivate = event.visibility === "private";
+  // A cancelled (audit B4) or ended (H4) event renders read-only: a banner, no RSVP,
+  // no voting, no add-to-calendar — the guest list + feed stay visible for reference.
+  const cancelled = event.status === "cancelled";
+  const inactive = cancelled || ended === true;
 
   // Address tier: only ever the full text when the payload says unlocked AND carries
   // it. Otherwise the city (first tier) is all there is to show.
@@ -72,6 +79,18 @@ export function EventView({
     <article className="mx-auto w-full max-w-2xl px-5 py-10 sm:px-8 sm:py-14">
       {/* ── Hero / poster: the signature element ─────────────────────────────── */}
       <Hero event={event} accent={accent} when={when} isPrivate={isPrivate} />
+
+      {/* ── Cancelled / ended banner (audit B4/H4) ───────────────────────────── */}
+      {inactive && (
+        <div
+          role="status"
+          className="mt-6 rounded-2xl border border-coral/40 bg-coral/10 px-5 py-4 text-center"
+        >
+          <p className="font-display text-lg font-bold text-paper">
+            {cancelled ? t("cancelledBanner") : t("endedBanner")}
+          </p>
+        </div>
+      )}
 
       {/* ── Headcount (first tier, only when the RPC returned counts) ─────────── */}
       {(hasCount || capacityLine) && (
@@ -97,12 +116,16 @@ export function EventView({
         </div>
       )}
 
-      {/* ── Add to calendar (first tier; no date ⇒ renders nothing) ───────────── */}
-      <AddToCalendar event={event} />
-
-      {/* ── Date poll (read-open tally; voting gated inside, task 5.1) ──────────
-          Renders only while the date is being decided; null once the host finalizes. */}
-      {pollSlot}
+      {/* ── Add to calendar + date poll — only for a live event (not cancelled/ended) ── */}
+      {!inactive && (
+        <>
+          {/* Add to calendar (first tier; no date ⇒ renders nothing). */}
+          <AddToCalendar event={event} />
+          {/* Date poll (read-open tally; voting gated inside, task 5.1). Renders only
+              while the date is being decided; null once the host finalizes. */}
+          {pollSlot}
+        </>
+      )}
 
       {/* ── Where ────────────────────────────────────────────────────────────── */}
       <Section title={t("whereTitle")}>
@@ -157,8 +180,9 @@ export function EventView({
       {/* ── RSVP ──────────────────────────────────────────────────────────────
           The RSVP form (name + status + optional +1/contact, guest_token, waitlist)
           slots in here from EventClient. It re-reads the event with the token on
-          success to reveal the unlocked view above (task 2.4b). */}
-      {rsvpSlot}
+          success to reveal the unlocked view above (task 2.4b). A cancelled/ended event
+          shows no RSVP — the banner above already explains it (audit B4/H15). */}
+      {!inactive && rsvpSlot}
 
       {/* ── Who's coming (second tier; unlocked viewers only, task 3.1) ─────────
           Renders only once an RSVP has unlocked the view — the data layer doesn't

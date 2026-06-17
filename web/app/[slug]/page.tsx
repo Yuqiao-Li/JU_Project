@@ -15,6 +15,7 @@ import {
   passwordCookieName,
   verifyPasswordCredential,
 } from "@/lib/events/password-credential";
+import { isEventEnded } from "@/lib/events/format";
 import { readComments } from "@/lib/events/read-comments";
 import { readEventBySlug } from "@/lib/events/read-event";
 import { createClient } from "@/lib/supabase/server";
@@ -91,8 +92,14 @@ export default async function PublicEventPage({
   if (!event) notFound();
 
   // Drafts aren't public yet. (A locked payload omits `status`, so this only fires on
-  // the normal façade — a password event still shows its gate.)
+  // the normal façade — a password event still shows its gate.) A CANCELLED event is
+  // NOT hidden — it renders with a "cancelled" banner and no RSVP (audit B4), so guests
+  // who hold the link learn it's off rather than RSVPing to a dead event.
   if (event.status === "draft") notFound();
+
+  // "Ended" (audit H4): a concrete end in the past, or — for an event with a start but
+  // no end — a few hours past its start (grace, so a just-started party isn't "ended").
+  const ended = isEventEnded(event.starts_at ?? null, event.ends_at ?? null, event.date_tbd === true);
 
   // The Activity Feed (task 4.1) only renders past the password gate. For a visible
   // event we seed it server-side: comments are READ-OPEN (D6), so we fetch them through
@@ -140,6 +147,7 @@ export default async function PublicEventPage({
           initialComments={initialComments}
           initialPoll={initialPoll}
           viewerIsHost={viewerIsHost}
+          ended={ended}
         />
       )}
 

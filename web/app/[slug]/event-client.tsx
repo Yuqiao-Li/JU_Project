@@ -8,6 +8,7 @@ import { DatePoll } from "@/components/events/date-poll";
 import { GuestList } from "@/components/events/guest-list";
 import { RsvpForm } from "@/components/events/rsvp-form";
 import type { CommentEntry } from "@/lib/events/comments";
+import { isEventEnded } from "@/lib/events/format";
 import { parseDatePoll, pollIsActive, type DatePoll as DatePollData } from "@/lib/events/date-poll";
 import { parseGuestList, type GuestListEntry } from "@/lib/events/guest-list";
 import {
@@ -59,6 +60,7 @@ export function EventClient({
   initialComments,
   initialPoll,
   viewerIsHost,
+  ended,
 }: {
   slug: string;
   initialEvent: EventViewData;
@@ -68,6 +70,12 @@ export function EventClient({
   initialPoll: DatePollData | null;
   /** True when the logged-in viewer owns this event (host may always comment). */
   viewerIsHost: boolean;
+  /**
+   * True when the event's time has passed (audit H4); gates RSVP/voting/calendar.
+   * Provided (server-computed) on the SSR path; omitted on the password-unlock path,
+   * where it's derived client-side from the revealed event's dates.
+   */
+  ended?: boolean;
 }) {
   const [event, setEvent] = useState<EventViewData>(initialEvent);
   const [guests, setGuests] = useState<GuestListEntry[]>([]);
@@ -150,10 +158,15 @@ export function EventClient({
 
   const accent = themeSwatch(themeColorFromJson(event.theme)).hex;
   const isFull = event.capacity_remaining === 0;
+  // Server-provided on the SSR path; on the password-unlock path it's omitted, so
+  // derive it from the revealed event's dates (client-side).
+  const effectiveEnded =
+    ended ?? isEventEnded(event.starts_at ?? null, event.ends_at ?? null, event.date_tbd === true);
 
   return (
     <EventView
       event={event}
+      ended={effectiveEnded}
       rsvpSlot={
         <RsvpForm
           slug={slug}

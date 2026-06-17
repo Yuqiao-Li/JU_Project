@@ -156,7 +156,18 @@
     "statusNotGoing": "Can’t go",
     "statusWaitlisted": "Waitlist",
     "moving": "Moving…",
-    "moveToGoing": "Move to going"
+    "moveToGoing": "Move to going",
+    "publish": "Publish event",
+    "unpublish": "Move to draft",
+    "unpublishConfirm": "Moving to draft makes shared links 404 until you publish again. Continue?",
+    "cancelEvent": "Cancel event",
+    "cancelConfirm": "Cancelling shows guests a 'cancelled' notice and stops new RSVPs. Continue?",
+    "republish": "Republish",
+    "deleteEvent": "Delete event",
+    "deleteConfirm": "Deleting is permanent — all RSVPs and comments are removed too. Delete?",
+    "actionFailed": "Something went wrong. Try again.",
+    "previewAsGuest": "Preview as guest",
+    "draftLinkHint": "This event is still a draft — the link only works for guests after you publish."
   },
   "settings": {
     "backToEvents": "Back to events",
@@ -186,7 +197,9 @@
     "chipInTitle": "Chip in",
     "chipInButton": "Chip in",
     "hostedBy": "Hosted by {name}",
-    "privateBadge": "Private"
+    "privateBadge": "Private",
+    "cancelledBanner": "This event is cancelled",
+    "endedBanner": "This event has ended"
   },
   "rsvp": {
     "eyebrow": "RSVP",

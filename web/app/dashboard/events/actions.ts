@@ -109,12 +109,23 @@ export async function updateEvent(_prev: EventFormState, formData: FormData): Pr
   if (!parsed.ok) return { status: "error", message: parsed.message };
   const { input, intent, password } = parsed.value;
 
+  // Don't let a content Save resurrect a cancelled event (H5): a cancelled event
+  // keeps its status until the host explicitly re-publishes via setEventStatus.
+  // For draft/published events the publish/draft toggle still applies.
+  const { data: existing } = await supabase
+    .from("events")
+    .select("status")
+    .eq("id", eventId)
+    .maybeSingle();
+  const nextStatus =
+    existing?.status === "cancelled" ? "cancelled" : intent === "publish" ? "published" : "draft";
+
   // UPDATE scoped by id; RLS USING (host_id = auth.uid()) means a non-owner
   // matches zero rows. We select() back so we can tell "saved" from "not yours".
   const { data: updated, error: updateError } = await supabase
     .from("events")
     .update({
-      status: intent === "publish" ? "published" : "draft",
+      status: nextStatus,
       ...toEventColumns(input),
     })
     .eq("id", eventId)
@@ -148,4 +159,64 @@ async function applyPassword(
   });
   if (error) return "Saved the details, but couldn't update the password. Try again.";
   return null;
+}
+
+export type LifecycleState = { ok: boolean; error?: string };
+
+const LIFECYCLE_STATUSES = ["draft", "published", "cancelled"] as const;
+type LifecycleStatus = (typeof LIFECYCLE_STATUSES)[number];
+
+/**
+ * Host-only lifecycle status change (publish / unpublish→draft / cancel / republish).
+ * Authorization is RLS: the UPDATE is scoped by id and USING (host_id = auth.uid()),
+ * so a non-owner matches zero rows. Returns a stable error CODE; the caller renders
+ * the localized message.
+ */
+export async function setEventStatus(
+  eventId: string,
+  status: LifecycleStatus,
+): Promise<LifecycleState> {
+  if (!LIFECYCLE_STATUSES.includes(status)) return { ok: false, error: "bad_status" };
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: "unauthenticated" };
+
+  const { data, error } = await supabase
+    .from("events")
+    .update({ status })
+    .eq("id", eventId)
+    .select("id")
+    .maybeSingle();
+
+  if (error) return { ok: false, error: "failed" };
+  if (!data) return { ok: false, error: "not_found" };
+
+  revalidatePath("/dashboard");
+  revalidatePath(`/dashboard/events/${eventId}`);
+  return { ok: true };
+}
+
+/**
+ * Host-only hard delete. RLS DELETE USING (host_id = auth.uid()) is the guard;
+ * guests/rsvps/comments cascade via ON DELETE CASCADE. Redirects to the dashboard.
+ */
+export async function deleteEvent(eventId: string): Promise<LifecycleState> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: "unauthenticated" };
+
+  const { error, count } = await supabase
+    .from("events")
+    .delete({ count: "exact" })
+    .eq("id", eventId);
+
+  if (error) return { ok: false, error: "failed" };
+  if (!count) return { ok: false, error: "not_found" };
+
+  revalidatePath("/dashboard");
+  redirect("/dashboard");
 }
