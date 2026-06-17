@@ -168,7 +168,7 @@
 
 ## Phase 5 — 日期投票
 
-- [ ] **5.1 日期投票 UI**(RPC 在 1.5e)【🟢】
+- [x] **5.1 日期投票 UI**(RPC 在 1.5e)【🟢】
   - 公开页:有候选且无最终日期时显示投票,多选(复用 token),**轮询计票**。host 改活动页:增删候选 + 每候选"敲定"(finalize_date 写回 starts_at,**保留投票记录**)。
   - 【禁止】敲定后不得删投票记录。 【验收】投票闭环+计票+敲定生效。 【测试】集成:vote_dates 多选 upsert;finalize_date 设 starts_at 且 votes 仍存。
 
