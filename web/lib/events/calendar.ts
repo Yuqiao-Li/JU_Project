@@ -49,7 +49,7 @@ export function eventCalendarSource(event: EventView): CalendarSource | null {
   const location = event.location_text ?? event.location_city ?? null;
 
   return {
-    uid: `${event.slug}@partiful-clone`,
+    uid: `${event.slug}@ju`,
     title: event.title,
     description: event.description ?? null,
     location,
@@ -121,7 +121,7 @@ export function buildIcs(src: CalendarSource, stamp: Date = src.start): string {
   const lines: string[] = [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
-    "PRODID:-//Partiful Clone//Events//EN",
+    "PRODID:-//JU//Events//EN",
     "CALSCALE:GREGORIAN",
     "METHOD:PUBLISH",
     "BEGIN:VEVENT",

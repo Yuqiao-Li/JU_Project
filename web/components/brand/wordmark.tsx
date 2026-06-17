@@ -10,7 +10,7 @@ export function Wordmark({ href = "/", className = "" }: { href?: string; classN
       href={href}
       className={`inline-flex items-baseline font-display text-2xl font-extrabold tracking-tight text-paper ${className}`}
     >
-      partiful
+      JU
       <span aria-hidden className="ml-0.5 text-coral">
         *
       </span>

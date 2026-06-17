@@ -39,7 +39,7 @@ export async function generateMetadata({
   const { username } = await params;
   const handle = normalizeUsername(decodeURIComponent(username));
   // Title only — a profile surfaces public events; nothing here is address-tier.
-  return { title: `@${handle} · partiful` };
+  return { title: `@${handle} · JU` };
 }
 
 export default async function OrganizerProfilePage({
@@ -106,7 +106,7 @@ export default async function OrganizerProfilePage({
           href="/"
           className="font-display text-sm font-bold tracking-tight text-muted transition hover:text-paper"
         >
-          made with partiful<span className="text-coral">*</span>
+          made with JU<span className="text-coral">*</span>
         </Link>
       </footer>
     </div>

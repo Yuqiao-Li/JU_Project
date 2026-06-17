@@ -148,7 +148,7 @@ export default async function PublicEventPage({
           href="/"
           className="font-display text-sm font-bold tracking-tight text-muted transition hover:text-paper"
         >
-          {t("madeWith")} partiful<span className="text-coral">*</span>
+          {t("madeWith")} JU<span className="text-coral">*</span>
         </Link>
       </footer>
     </div>

@@ -21,7 +21,7 @@ export const RESERVED_USERNAMES: ReadonlySet<string> = new Set([
   "admin", "administrator", "root", "support", "help", "about", "contact",
   "login", "logout", "signin", "signout", "signup", "register", "auth",
   "dashboard", "settings", "account", "profile", "api", "u", "new", "edit",
-  "event", "events", "host", "guest", "me", "you", "partiful", "null",
+  "event", "events", "host", "guest", "me", "you", "ju", "partiful", "null",
   "undefined", "static", "public", "assets", "favicon",
 ]);
 

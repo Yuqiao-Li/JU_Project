@@ -35,7 +35,7 @@ function GlobalErrorContent({ onRetry }: { onRetry: () => void }) {
     <main className="flex min-h-screen items-center justify-center px-5 py-20">
       <div className="w-full max-w-md text-center">
         <p className="font-display text-2xl font-extrabold tracking-tight text-paper">
-          partiful<span className="text-coral">*</span>
+          JU<span className="text-coral">*</span>
         </p>
         <h1 className="mt-10 font-display text-3xl font-extrabold text-paper">
           {t("generic.title")}

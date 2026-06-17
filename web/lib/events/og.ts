@@ -19,7 +19,7 @@ import type { EventView } from "./view";
  * password credential (an unfurl bot carries neither anyway), then hands it here.
  */
 
-const SITE_NAME = "Partiful";
+const SITE_NAME = "JU";
 
 /** Keep OG descriptions to a sane length for a card; full text lives on the page. */
 const OG_DESCRIPTION_MAX = 200;
