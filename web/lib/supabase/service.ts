@@ -2,6 +2,8 @@ import "server-only";
 
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 
+import type { Database } from "@/types/database";
+
 import { supabaseServiceRoleKey, supabaseUrl } from "./env";
 
 /**
@@ -20,7 +22,7 @@ import { supabaseServiceRoleKey, supabaseUrl } from "./env";
  * No session is persisted: it must never pick up or mutate a user session.
  */
 export function createServiceClient() {
-  return createSupabaseClient(supabaseUrl(), supabaseServiceRoleKey(), {
+  return createSupabaseClient<Database>(supabaseUrl(), supabaseServiceRoleKey(), {
     auth: {
       persistSession: false,
       autoRefreshToken: false,

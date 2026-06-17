@@ -1,5 +1,7 @@
 import { createBrowserClient } from "@supabase/ssr";
 
+import type { Database } from "@/types/database";
+
 import { supabaseAnonKey, supabaseUrl } from "./env";
 
 /**
@@ -11,5 +13,5 @@ import { supabaseAnonKey, supabaseUrl } from "./env";
  * surface; never trust it for authorization.
  */
 export function createClient() {
-  return createBrowserClient(supabaseUrl(), supabaseAnonKey());
+  return createBrowserClient<Database>(supabaseUrl(), supabaseAnonKey());
 }

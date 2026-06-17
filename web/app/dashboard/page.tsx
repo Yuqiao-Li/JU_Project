@@ -57,17 +57,24 @@ export default async function DashboardPage() {
         <div className="mt-8 rounded-2xl border border-line bg-surface/60 p-6">
           <p className="text-paper">No events yet.</p>
           <p className="mt-1 text-sm text-muted">
-            Creating events arrives next. For now, set your public handle so people can find your
-            profile.
+            Create your first event, publish it, and share the link — guests RSVP without an account.
           </p>
-          {!profile?.username && (
+          <div className="mt-4 flex flex-wrap gap-3">
             <Link
-              href="/dashboard/settings"
-              className="mt-4 inline-flex h-11 items-center justify-center rounded-xl bg-coral px-5 font-semibold text-ink transition hover:brightness-105"
+              href="/dashboard/events/new"
+              className="inline-flex h-11 items-center justify-center rounded-xl bg-coral px-5 font-semibold text-ink transition hover:brightness-105"
             >
-              Choose your username
+              New event
             </Link>
-          )}
+            {!profile?.username && (
+              <Link
+                href="/dashboard/settings"
+                className="inline-flex h-11 items-center justify-center rounded-xl border border-line px-5 font-semibold text-paper transition hover:bg-surface-2"
+              >
+                Choose your username
+              </Link>
+            )}
+          </div>
         </div>
       </main>
     </div>

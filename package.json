@@ -8,6 +8,7 @@
     "db:stop": "supabase stop",
     "db:status": "supabase status",
     "db:reset": "supabase db reset",
-    "db:apply": "supabase migration up"
+    "db:apply": "supabase migration up",
+    "db:gen-types": "supabase gen types typescript --local --schema public > web/types/database.ts"
   }
 }
