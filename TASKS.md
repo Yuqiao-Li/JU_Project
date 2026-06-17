@@ -188,6 +188,6 @@
   - 全页面空/加载/错误态齐全;移动端可用;reduced-motion/键盘焦点/对比度达标。
   - 【验收】关键页窄屏可用、各态有处理。 【测试】N/A
 
-- [ ] **6.4 README + 最终安全过一遍** 【🟢】
+- [x] **6.4 README + 最终安全过一遍** 【🟢】
   - README:setup/env/migration/部署(Vercel+Supabase+Upstash)。对照 CLAUDE.md 安全清单 + 本报告 D1–D16/G1–G8 逐条核。
   - 【验收】README 完整;安全清单全过或记 BLOCKERS。 【测试】跑全量套件全绿。
