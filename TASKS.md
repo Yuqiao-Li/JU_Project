@@ -90,7 +90,7 @@
   - vote_dates(多选 upsert);finalize_date/promote_guest(**host-only:auth.uid()=host_id 否则 raise,须 host auth 上下文**,D7③);get_my_events(D1)、get_public_events_by_host(D2)。
   - 【禁止】非 host 不得 finalize/promote;聚合读只返回应公开的。 【测试】§1.5e。
 
-- [ ] **1.6 slug 生成函数 + 单元测试** 【🟢】
+- [x] **1.6 slug 生成函数 + 单元测试** 【🟢】
   - slugify(前40)-{10位base62},gen_random_bytes,中文/空标题纯随机段,**冲突重试一次、再冲突 fail-closed raise**(D15)。
   - 【禁止】禁 random()/时间戳/自增。 【测试】单元:随机段长=10、纯中文输出纯随机段、不重复、不含禁用字符、二次冲突 raise。
 
