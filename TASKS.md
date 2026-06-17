@@ -128,7 +128,7 @@
   - Next 层 + Upstash 读侧限流(真实 IP 来自 Vercel);**已RSVP/受信轮询走更宽松配额、间隔对齐窗口**(D4/D14)。私密读取只走 Next SSR(受信角色),anon 不可直打 private RPC。**密码尝试独立限流**(D7amend)。
   - 【禁止】限流不得放 Postgres 读侧;不得因取不到 IP 形同虚设;private 不得对 anon 裸奔。 【验收】见 TEST-SPEC §2.3.5。 【测试】§2.3.5。
 
-- [ ] **2.4a [SECURITY] 公开活动页 SSR + 分级 + 私密收敛** 【🟢 语义不可降】
+- [x] **2.4a [SECURITY] 公开活动页 SSR + 分级 + 私密收敛** 【🟢 语义不可降】
   - /{slug}:**SSR 经受信角色调 get_event_by_slug**。**严格分级**:未解锁只见第一类;解锁后第二类(完整地址)。私密只走 SSR;密码活动显示密码框(verify_event_password,验过发短时凭证)。
   - 【禁止】未解锁页**绝不渲染完整地址/名单**(数据层就不返回);anon 直打 private RPC 被拒。 【验收/测试】见 TEST-SPEC §2.4。
 
