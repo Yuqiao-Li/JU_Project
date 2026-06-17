@@ -4,12 +4,15 @@ import { notFound } from "next/navigation";
 
 import { EventClient } from "./event-client";
 import { PasswordGate } from "./password-gate";
+import type { CommentEntry } from "@/lib/events/comments";
 import {
   credentialSecret,
   passwordCookieName,
   verifyPasswordCredential,
 } from "@/lib/events/password-credential";
+import { readComments } from "@/lib/events/read-comments";
 import { readEventBySlug } from "@/lib/events/read-event";
+import { createClient } from "@/lib/supabase/server";
 
 /**
  * Public event page (task 2.4a) — `/{slug}`, the link a host shares with guests.
@@ -63,6 +66,30 @@ export default async function PublicEventPage({
   // the normal façade — a password event still shows its gate.)
   if (event.status === "draft") notFound();
 
+  // The Activity Feed (task 4.1) only renders past the password gate. For a visible
+  // event we seed it server-side: comments are READ-OPEN (D6), so we fetch them through
+  // the trusted role (which is also the ONLY path a private event's feed resolves on),
+  // and we detect whether the viewer is the host — events SELECT RLS only returns the
+  // row to its owner (host_id = auth.uid()), so a returned row IS proof of ownership,
+  // and the host may always comment. Skipped behind a password box (nothing to show).
+  let initialComments: CommentEntry[] = [];
+  let viewerIsHost = false;
+  if (!event.locked) {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (user) {
+      const { data: owned } = await supabase
+        .from("events")
+        .select("id")
+        .eq("slug", slug)
+        .maybeSingle();
+      viewerIsHost = owned != null;
+    }
+    initialComments = await readComments(slug);
+  }
+
   return (
     <div className="flex min-h-full flex-col">
       {event.locked ? (
@@ -73,7 +100,12 @@ export default async function PublicEventPage({
           description={event.description ?? null}
         />
       ) : (
-        <EventClient slug={slug} initialEvent={event} />
+        <EventClient
+          slug={slug}
+          initialEvent={event}
+          initialComments={initialComments}
+          viewerIsHost={viewerIsHost}
+        />
       )}
 
       <footer className="mt-auto px-5 py-8 text-center">

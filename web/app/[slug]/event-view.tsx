@@ -26,6 +26,7 @@ export function EventView({
   event,
   rsvpSlot,
   guestListSlot,
+  commentsSlot,
 }: {
   event: EventView;
   /** The RSVP interaction (client), slotted in by `EventClient`. */
@@ -36,6 +37,12 @@ export function EventView({
    * already desensitized, so a locked view shows nothing here (the slot returns null).
    */
   guestListSlot?: React.ReactNode;
+  /**
+   * The Activity Feed (client), slotted in by `EventClient` (task 4.1). Unlike the
+   * list it is READ-OPEN — it renders for locked and unlocked viewers alike — but
+   * POSTING is gated inside the slot (and in the DB).
+   */
+  commentsSlot?: React.ReactNode;
 }) {
   const accent = themeSwatch(themeColorFromJson(event.theme)).hex;
   const when = formatEventWhen(event.starts_at ?? null, event.date_tbd ?? false);
@@ -140,6 +147,9 @@ export function EventView({
           Renders only once an RSVP has unlocked the view — the data layer doesn't
           return the list otherwise, so for a locked viewer this slot is null. */}
       {guestListSlot}
+
+      {/* ── Activity feed (read-open; posting gated inside, task 4.1) ─────────── */}
+      {commentsSlot}
     </article>
   );
 }

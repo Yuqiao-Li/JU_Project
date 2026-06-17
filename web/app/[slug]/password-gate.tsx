@@ -43,7 +43,15 @@ export function PasswordGate({
   const [error, setError] = useState<string | null>(null);
   const [unlocked, setUnlocked] = useState<EventViewData | null>(null);
 
-  if (unlocked) return <EventClient slug={slug} initialEvent={unlocked} />;
+  // Past the gate, the Activity Feed seeds itself (it polls get_comments on mount —
+  // read-open), so we hand EventClient an empty initial feed. A host viewing their own
+  // password link is the rare case; they manage from the dashboard, so viewerIsHost is
+  // false here and the composer follows the guest unlock rules.
+  if (unlocked) {
+    return (
+      <EventClient slug={slug} initialEvent={unlocked} initialComments={[]} viewerIsHost={false} />
+    );
+  }
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();

@@ -3,8 +3,10 @@
 import { useCallback, useEffect, useState } from "react";
 
 import { EventView } from "./event-view";
+import { CommentsFeed } from "@/components/events/comments-feed";
 import { GuestList } from "@/components/events/guest-list";
 import { RsvpForm } from "@/components/events/rsvp-form";
+import type { CommentEntry } from "@/lib/events/comments";
 import { parseGuestList, type GuestListEntry } from "@/lib/events/guest-list";
 import {
   loadRsvpRecord,
@@ -51,9 +53,15 @@ interface EventSnapshot {
 export function EventClient({
   slug,
   initialEvent,
+  initialComments,
+  viewerIsHost,
 }: {
   slug: string;
   initialEvent: EventViewData;
+  /** SSR-fetched comment feed (read-open, task 4.1); the feed re-polls client-side. */
+  initialComments: CommentEntry[];
+  /** True when the logged-in viewer owns this event (host may always comment). */
+  viewerIsHost: boolean;
 }) {
   const [event, setEvent] = useState<EventViewData>(initialEvent);
   const [guests, setGuests] = useState<GuestListEntry[]>([]);
@@ -155,6 +163,18 @@ export function EventClient({
           unlocked={event.unlocked === true}
           hidden={event.hide_guest_list === true}
           showCounts={event.hide_guest_count !== true}
+          accent={accent}
+        />
+      }
+      commentsSlot={
+        <CommentsFeed
+          slug={slug}
+          initialComments={initialComments}
+          unlocked={event.unlocked === true}
+          rsvpEnabled={event.rsvp_enabled !== false}
+          viewerIsHost={viewerIsHost}
+          hideTimestamps={event.hide_feed_timestamps === true}
+          token={token}
           accent={accent}
         />
       }
