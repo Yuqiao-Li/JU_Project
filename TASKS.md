@@ -140,7 +140,7 @@
   - host 端设/清活动密码(服务端 bcrypt hash);公开页密码框 → verify_event_password → 短时签名凭证 cookie → 读/轮询不再重哈希(D7⑤/amend)。
   - 【禁止】密码不得明文存/传;不得每次读重跑 bcrypt。 【验收】设密码后无正确密码看不到第二类。 【测试】见 TEST-SPEC(密码)。
 
-- [ ] **2.6 加入日历** 【🟢】
+- [x] **2.6 加入日历** 【🟢】
   - "加入日历":Google Calendar template URL + .ics 下载。**不依赖 contact。**
   - 【验收】可加 Google 日历/下载 .ics。 【测试】单元:.ics 含正确 DTSTART/SUMMARY/LOCATION。
 
