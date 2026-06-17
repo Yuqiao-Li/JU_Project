@@ -108,7 +108,7 @@
 
 > **动手前必读 DESIGN-TONE.md + frontend-design SKILL.md**。承载安全/数据语义的行为必须正确。
 
-- [ ] **2.1 host 认证** 【🟢】
+- [x] **2.1 host 认证** 【🟢】
   - magic link(必做)+ Google。**profiles 由触发器建档**(非 client upsert);**username 唯一靠 DB 索引**,设置 UI 查仅提示。/dashboard 守卫。
   - 【禁止】不实现微信;guest 无任何登录入口;client 不得传 profiles.id。 【验收】登录/登出;profile 自动建;守卫生效。 【测试】集成(admin 会话):首登后 profiles 存在;不能为 id≠auth.uid() 写 profiles;并发抢同名只一个胜。
 
