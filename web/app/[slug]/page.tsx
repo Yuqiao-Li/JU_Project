@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -7,6 +8,7 @@ import { PasswordGate } from "./password-gate";
 import type { CommentEntry } from "@/lib/events/comments";
 import type { DatePoll } from "@/lib/events/date-poll";
 import { readDatePoll } from "@/lib/events/read-date-poll";
+import { buildEventOgMetadata } from "@/lib/events/og";
 import {
   credentialSecret,
   passwordCookieName,
@@ -42,6 +44,28 @@ import { createClient } from "@/lib/supabase/server";
  * bcrypt (读/轮询不再重哈希) — the page renders the event directly, not the box.
  */
 export const dynamic = "force-dynamic";
+
+/**
+ * Share-preview metadata (task 6.2 [SECURITY]) — the OG/Twitter card a messaging app
+ * shows when the host's `/{slug}` link is pasted.
+ *
+ * FIRST TIER ONLY (task 禁止: "OG 不得泄露完整地址/名单"). We resolve the façade through
+ * the trusted role with NO guest token and NO password credential, so `get_event_by_slug`
+ * returns only the first tier (a password event returns just its locked title/cover/
+ * description) — `location_text` and the guest list are never in scope. An unfurl bot
+ * carries neither cookie nor localStorage token anyway, so this is exactly what it sees.
+ * `buildEventOgMetadata` then reads only title/cover/description, so the card cannot
+ * carry the address even for a private or password-protected event.
+ */
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}): Promise<Metadata> {
+  const { slug } = await params;
+  const event = await readEventBySlug(slug);
+  return buildEventOgMetadata(event);
+}
 
 export default async function PublicEventPage({
   params,
