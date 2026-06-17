@@ -136,7 +136,7 @@
   - RSVP 组件(name+状态+可选+1+可选 contact)调 submit_rsvp;**token 存 localStorage,绝不进 URL**;成功后重调 get_event_by_slug(token) 渲染解锁视图(D15);复访预填+可改;容量满显示 waitlist。
   - 【禁止】token 绝不进 URL/可分享处;无 localStorage 外违规存储。 【验收/测试】见 TEST-SPEC §2.4。
 
-- [ ] **2.5 密码保护 UI** 【🟢】
+- [x] **2.5 密码保护 UI** 【🟢】
   - host 端设/清活动密码(服务端 bcrypt hash);公开页密码框 → verify_event_password → 短时签名凭证 cookie → 读/轮询不再重哈希(D7⑤/amend)。
   - 【禁止】密码不得明文存/传;不得每次读重跑 bcrypt。 【验收】设密码后无正确密码看不到第二类。 【测试】见 TEST-SPEC(密码)。
 
