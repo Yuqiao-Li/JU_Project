@@ -1,26 +1,79 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+/*
+ * Partiful-clone design tokens (DESIGN-TONE.md).
+ * Mood: a warm, present-tense, nightlife-social invite app for young friend
+ * groups. Intentionally dark-first (social use skews to evenings) — dark is the
+ * design, not a patch. Boldness is spent in one place: the aurora "party light"
+ * behind the wordmark on the front door. Everything else stays quiet.
+ *
+ * Palette is deliberately NOT one of the AI-default clusters: a deep plum-ink
+ * base (not near-black, not cream), two warm accents (coral + amber) plus a cool
+ * iris counter-accent — coral, not the terracotta/acid-green cliché.
+ */
+@theme {
+  --color-ink: #15101e; /* base background — deep plum-ink */
+  --color-surface: #1f1830; /* raised card */
+  --color-surface-2: #2a2140; /* inputs / hover */
+  --color-line: #372f4d; /* hairlines, borders */
+  --color-paper: #fbf6f1; /* warm near-white for text on dark */
+  --color-muted: #b3a9c9; /* secondary text */
+  --color-coral: #ff6a5c; /* primary accent — invite energy */
+  --color-amber: #ffb14e; /* warm gradient partner */
+  --color-iris: #9b8cff; /* cool counter-accent — links, focus */
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --font-display: var(--font-display-face), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-ink);
+  color: var(--color-paper);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Eyebrow / utility label — mono, tracked, small caps feel. */
+.eyebrow {
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  font-size: 0.7rem;
+  color: var(--color-muted);
+}
+
+/* Signature element: the "party light". A soft radial aurora that breathes
+ * behind the wordmark. Reduced motion turns the breathing off — the glow stays,
+ * just still. */
+.aurora {
+  background:
+    radial-gradient(60% 60% at 30% 30%, color-mix(in oklab, var(--color-coral) 55%, transparent), transparent 70%),
+    radial-gradient(55% 55% at 70% 35%, color-mix(in oklab, var(--color-amber) 45%, transparent), transparent 70%),
+    radial-gradient(60% 60% at 50% 75%, color-mix(in oklab, var(--color-iris) 50%, transparent), transparent 72%);
+  filter: blur(46px);
+  opacity: 0.7;
+  animation: aurora-breathe 9s ease-in-out infinite;
+}
+
+@keyframes aurora-breathe {
+  0%, 100% { transform: scale(1) translateY(0); opacity: 0.6; }
+  50% { transform: scale(1.08) translateY(-2%); opacity: 0.78; }
+}
+
+/* Accessible focus ring used app-wide. */
+:focus-visible {
+  outline: 2px solid var(--color-iris);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .aurora {
+    animation: none;
+  }
+  * {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
 }
