@@ -5,6 +5,7 @@ import { useActionState, useState } from "react";
 
 import { CoverUploader } from "@/components/events/cover-uploader";
 import { DEFAULT_THEME, EFFECT_PRESETS, THEME_SWATCHES, type ThemeKey } from "@/lib/events/theme";
+import { isoToLocalInput } from "@/lib/events/timezone";
 
 import { createEvent, type EventFormState, updateEvent } from "./actions";
 
@@ -61,13 +62,9 @@ const BLANK: EventDefaults = {
 const inputClass =
   "h-12 w-full rounded-xl border border-line bg-surface-2 px-4 text-paper placeholder:text-muted/60 focus:border-iris focus:outline-none disabled:opacity-50";
 
-/** ISO timestamp → the "YYYY-MM-DDTHH:mm" a datetime-local input wants (browser tz). */
+/** ISO instant → "YYYY-MM-DDTHH:mm" in Beijing time for a datetime-local input. */
 function toLocalInput(iso: string | null): string {
-  if (!iso) return "";
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "";
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  return isoToLocalInput(iso);
 }
 
 function SectionLabel({ children }: { children: React.ReactNode }) {

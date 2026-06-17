@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { parseEffect, parseThemeColor, type ThemeKey } from "./theme";
+import { localInputToISO } from "./timezone";
 
 /**
  * Validation boundary for the create/edit event form (tasks 2.2a + 2.2b).
@@ -87,12 +88,17 @@ const coverUrlSchema = httpsOnly("That cover image link looks off.");
 
 const VISIBILITIES = ["public", "private"] as const;
 
-/** Datetime-local strings ("2026-06-20T19:30"); empty → null. Must be parseable. */
+/**
+ * Datetime-local "2026-06-20T19:30" → the correct UTC ISO instant. The naive
+ * input is read as Beijing wall-clock time (Asia/Shanghai, +08:00) so it is
+ * stored as the instant the host actually meant; empty → null.
+ */
 function parseDateTime(raw: string, label: string): string | null | { error: string } {
   const v = raw.trim();
   if (v === "") return null;
-  if (Number.isNaN(Date.parse(v))) return { error: `That ${label} doesn't look like a valid date and time.` };
-  return v;
+  const iso = localInputToISO(v);
+  if (iso === null) return { error: `That ${label} doesn't look like a valid date and time.` };
+  return iso;
 }
 
 /**
