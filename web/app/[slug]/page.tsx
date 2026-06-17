@@ -1,8 +1,14 @@
+import { cookies } from "next/headers";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { EventClient } from "./event-client";
 import { PasswordGate } from "./password-gate";
+import {
+  credentialSecret,
+  passwordCookieName,
+  verifyPasswordCredential,
+} from "@/lib/events/password-credential";
 import { readEventBySlug } from "@/lib/events/read-event";
 
 /**
@@ -25,7 +31,10 @@ import { readEventBySlug } from "@/lib/events/read-event";
  *
  * PASSWORD. A password-protected event comes back as the minimal locked façade
  * (`locked: true`); we hand it to <PasswordGate>, which verifies via the rate-limited
- * endpoint and reveals the event on success.
+ * endpoint and reveals the event on success. On a RELOAD after a prior unlock the guest
+ * carries the short-lived signed credential cookie (task 2.5); we validate it here and
+ * pass `passwordVerified` so the trusted read resumes normal tiering without re-running
+ * bcrypt (读/轮询不再重哈希) — the page renders the event directly, not the box.
  */
 export const dynamic = "force-dynamic";
 
@@ -36,9 +45,18 @@ export default async function PublicEventPage({
 }) {
   const { slug } = await params;
 
+  // A returning guest of a password event carries the slug-scoped credential cookie
+  // minted at unlock. Validate the cheap MAC; a valid one lets this SSR render skip the
+  // password gate (no bcrypt). Absent/invalid ⇒ false ⇒ the locked façade + box.
+  const credential = (await cookies()).get(passwordCookieName(slug))?.value ?? null;
+  const passwordVerified = credential
+    ? verifyPasswordCredential(slug, credential, credentialSecret())
+    : false;
+
   // No token at SSR — the guest_token is client-only (localStorage) and never rides
-  // in the URL. First tier is all this render can resolve.
-  const event = await readEventBySlug(slug);
+  // in the URL. First tier is all this render can resolve (plus the password gate, which
+  // the credential above may open).
+  const event = await readEventBySlug(slug, { passwordVerified });
   if (!event) notFound();
 
   // Drafts aren't public yet. (A locked payload omits `status`, so this only fires on

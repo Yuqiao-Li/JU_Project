@@ -1,5 +1,10 @@
 import { NextResponse, type NextRequest } from "next/server";
 
+import {
+  credentialSecret,
+  passwordCookieName,
+  verifyPasswordCredential,
+} from "@/lib/events/password-credential";
 import { readEventBySlug } from "@/lib/events/read-event";
 import { ipFromHeaders } from "@/lib/ratelimit/ip";
 import { rateLimit } from "@/lib/ratelimit/limiter";
@@ -39,7 +44,16 @@ export async function GET(
   const limit = await rateLimit(quota, ip);
   if (!limit.success) return rateLimitedResponse(limit);
 
-  const event = await readEventBySlug(slug, { guestToken });
+  // A password event polls with the signed credential cookie minted at unlock (task
+  // 2.5). Validate the cheap MAC here and pass `passwordVerified` so the trusted read
+  // resumes normal tiering without re-running bcrypt (读/轮询不再重哈希). Invalid/absent
+  // ⇒ false ⇒ the password gate stays shut.
+  const credential = request.cookies.get(passwordCookieName(slug))?.value ?? null;
+  const passwordVerified = credential
+    ? verifyPasswordCredential(slug, credential, credentialSecret())
+    : false;
+
+  const event = await readEventBySlug(slug, { guestToken, passwordVerified });
   if (!event) {
     return NextResponse.json(
       { error: "not_found" },

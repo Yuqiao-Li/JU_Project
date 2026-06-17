@@ -28,6 +28,14 @@ export interface ReadEventOptions {
   guestToken?: string | null;
   /** Candidate password for a password-protected event. */
   password?: string | null;
+  /**
+   * Trusted "password already satisfied" signal (task 2.5). Set ONLY after the
+   * caller has validated the guest's signed credential cookie for THIS slug; it lets
+   * `get_event_by_slug` skip the password gate without re-running bcrypt (读/轮询不再
+   * 重哈希). Honoured by the RPC only for the service-role path, so it can never widen
+   * exposure beyond the trusted server.
+   */
+  passwordVerified?: boolean;
 }
 
 /**
@@ -45,6 +53,7 @@ export async function readEventBySlug(
     slug,
     guest_token: opts.guestToken ?? undefined,
     password: opts.password ?? undefined,
+    password_verified: opts.passwordVerified ? true : undefined,
   });
 
   if (error || data == null) return null;

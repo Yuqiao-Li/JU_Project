@@ -30,8 +30,9 @@ import { eventViewSchema, type EventView as EventViewData } from "@/lib/events/v
  *
  * STRICT TIERING stays a DATA fact, not a CSS one: the address only ever shows because
  * the re-read returned `location_text` for an unlocked caller — we never synthesise it.
- * A re-read that comes back LOCKED (e.g. a password event before its 2.5 credential, or
- * an invalid token) is ignored so we never overwrite a good view with a re-locked one.
+ * A re-read that comes back LOCKED (an invalid token, or a password event whose
+ * credential cookie is absent/expired — task 2.5) is ignored so we never overwrite a
+ * good view with a re-locked one.
  */
 export function EventClient({
   slug,

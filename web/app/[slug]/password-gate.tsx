@@ -22,9 +22,10 @@ import type { EventView as EventViewData } from "@/lib/events/view";
  * `EventClient` so the guest can RSVP from here too. The password travels only in the
  * POST body, never a URL.
  *
- * The persistent short-lived signed credential (so a reload/poll — and the post-RSVP
- * address re-read — skips re-hashing) is task 2.5; until then a correct password
- * reveals the first tier for this view and the RSVP form works (RSVP needs no password).
+ * That same success ALSO sets a short-lived, slug-scoped signed credential cookie
+ * (task 2.5, D7⑤/amend). On a later reload/poll the trusted SSR + poll paths validate
+ * that cookie and read with `password_verified`, so the bcrypt is never re-run — the
+ * page comes back already unlocked instead of showing this box again.
  */
 export function PasswordGate({
   slug,

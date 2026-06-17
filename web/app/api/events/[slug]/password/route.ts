@@ -1,5 +1,11 @@
 import { NextResponse, type NextRequest } from "next/server";
 
+import {
+  credentialSecret,
+  passwordCookieName,
+  passwordCredentialCookieOptions,
+  signPasswordCredential,
+} from "@/lib/events/password-credential";
 import { readEventBySlug } from "@/lib/events/read-event";
 import { ipFromHeaders } from "@/lib/ratelimit/ip";
 import { rateLimit } from "@/lib/ratelimit/limiter";
@@ -21,9 +27,12 @@ import { createServiceClient } from "@/lib/supabase/service";
  * poster, not the address — the address needs an RSVP token (get_event_by_slug's
  * second tier). The password only ever travels in this POST body, never a URL.
  *
- * SCOPE: the verify itself is the existing SECURITY DEFINER `verify_event_password`
- * (real bcrypt). Minting the short-lived signed credential cookie that lets a
- * reload/poll skip the bcrypt re-check is task 2.5; it builds on this endpoint.
+ * CREDENTIAL (task 2.5, D7⑤/amend). On a correct password we mint a short-lived,
+ * HMAC-signed credential scoped to THIS slug and set it as an HttpOnly cookie. Later
+ * reloads/polls send that cookie; the trusted SSR/poll path validates the cheap MAC and
+ * reads with `password_verified` so the bcrypt is NEVER re-run ("读/轮询不再重哈希").
+ * The cookie carries no plaintext password — only the signature — so nothing secret is
+ * stored or transmitted, and it only ever travels in the cookie, never a URL.
  */
 export const dynamic = "force-dynamic";
 
@@ -63,8 +72,16 @@ export async function POST(
   }
 
   // Verified: hand back the unlocked façade (first tier; no token ⇒ no address) so the
-  // gate renders the event in place. Trusted role again, so private + this password
-  // both pass the RPC's gates.
-  const event = await readEventBySlug(slug, { password });
-  return NextResponse.json({ ok: true, event });
+  // gate renders the event in place. We re-read with the trusted `passwordVerified` flag
+  // (not the plaintext) — the password is already confirmed, so this avoids a SECOND
+  // bcrypt at unlock; the verify above is the only hash. Trusted role, so a private
+  // event still resolves here too.
+  const event = await readEventBySlug(slug, { passwordVerified: true });
+
+  // Mint the short-lived signed credential so subsequent reloads/polls skip bcrypt. The
+  // cookie holds only the slug-scoped signature — no plaintext password (密码不得明文存/传).
+  const response = NextResponse.json({ ok: true, event });
+  const credential = signPasswordCredential(slug, credentialSecret());
+  response.cookies.set(passwordCookieName(slug), credential, passwordCredentialCookieOptions());
+  return response;
 }

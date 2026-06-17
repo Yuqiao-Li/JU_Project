@@ -697,7 +697,12 @@ export type Database = {
         Returns: Json
       }
       get_event_by_slug: {
-        Args: { guest_token?: string; password?: string; slug: string }
+        Args: {
+          guest_token?: string
+          password?: string
+          password_verified?: boolean
+          slug: string
+        }
         Returns: Json
       }
       get_guest_list: {
