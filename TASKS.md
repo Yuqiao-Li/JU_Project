@@ -98,7 +98,7 @@
   - 建 `event-covers`(公开读/host 写)、`event-photos`(私有);storage.objects RLS(写=authenticated 且拥有 event 且路径前缀);bucket `allowed_mime_types` + `file_size_limit`(D16)。
   - 【禁止】anon 不得写;相册不得公开读。 【验收】桶建好、RLS 生效。 【测试】见 TEST-SPEC(Storage 授权)。
 
-- [ ] **1.8 seed + 类型生成** 【🟢】
+- [x] **1.8 seed + 类型生成** 【🟢】
   - seed:1 host、公开/私密各 1 活动(**location_text 用 sentinel 串**,D15)、若干 guests/rsvps、几条 comments、1 日期投票。生成 TS 类型到 types/database.ts。
   - 【验收】seed 无错;类型文件存在且被引用。 【测试】N/A
 
