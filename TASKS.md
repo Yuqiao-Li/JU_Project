@@ -176,7 +176,7 @@
 
 ## Phase 6 — 个人页 + 收尾
 
-- [ ] **6.1 Organizer Profile** 【🟢】
+- [x] **6.1 Organizer Profile** 【🟢】
   - /u/[username] 经 **get_public_events_by_host** 聚合该 host 公开活动(**不 anon 直查表**,D2)。username 设置入口 + 唯一校验。
   - 【禁止】不暴露私密活动。 【验收】/u/[username] 见该 host 的 public 活动。 【测试】集成:不含 private;走 RPC 非直查表。
 
