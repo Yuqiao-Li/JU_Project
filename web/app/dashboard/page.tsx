@@ -36,7 +36,14 @@ export default async function DashboardPage() {
   const greetingName = profile?.display_name?.trim() || user.email?.split("@")[0] || "host";
 
   const { data: feed, error } = await supabase.rpc("get_my_events");
-  const events = error ? [] : parseMyEvents(feed);
+  // A real RPC failure must NOT collapse into the cheerful empty state — that
+  // would hide existing events behind "No events yet" on a transient blip. Throw
+  // so the route error boundary (app/error.tsx) shows an error + retry (H20).
+  if (error) {
+    console.error("[dashboard] get_my_events failed:", error.message);
+    throw new Error("Failed to load your events");
+  }
+  const events = parseMyEvents(feed);
   const { upcoming, past } = groupEventsByTime(events, new Date());
   const hasEvents = events.length > 0;
 

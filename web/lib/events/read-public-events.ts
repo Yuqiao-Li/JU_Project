@@ -21,11 +21,21 @@ import { createClient } from "@/lib/supabase/server";
  * An unknown username returns [] (the RPC gives no existence oracle, D2) — callers
  * render the same empty profile either way, so a real-but-eventless host and a missing
  * one are indistinguishable.
+ *
+ * ERROR vs EMPTY (H20): a real RPC failure (network / DB blip) must NOT masquerade as
+ * "this host has no public events" — that hides their actual list behind the empty
+ * state. We throw on a genuine RPC error so the route error boundary (app/error.tsx)
+ * shows an error + retry. A null/empty payload with NO error stays [] — that is the
+ * legitimate "no public events / unknown handle" case (D2), never an error.
  */
 export async function readPublicEventsByHost(username: string): Promise<PublicEvent[]> {
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("get_public_events_by_host", { username });
 
-  if (error || data == null) return [];
+  if (error) {
+    console.error("[organizer] get_public_events_by_host failed:", error.message);
+    throw new Error("Failed to load this organizer's events");
+  }
+  if (data == null) return [];
   return parsePublicEvents(data);
 }

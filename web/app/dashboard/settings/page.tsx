@@ -15,11 +15,18 @@ export default async function SettingsPage() {
   } = await supabase.auth.getUser();
   if (!user) redirect("/login?next=/dashboard/settings");
 
-  const { data: profile } = await supabase
+  const { data: profile, error } = await supabase
     .from("profiles")
     .select("display_name, username")
     .eq("id", user.id)
     .maybeSingle();
+  // A fetch error must not collapse into blank defaults — that would render the
+  // form pre-filled as empty and risk a save wiping the real values. Throw so the
+  // route error boundary (app/error.tsx) shows an error + retry instead (H20).
+  if (error) {
+    console.error("[settings] profile load failed:", error.message);
+    throw new Error("Failed to load your profile");
+  }
 
   return (
     <div className="flex flex-1 flex-col">

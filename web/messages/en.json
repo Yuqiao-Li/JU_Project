@@ -22,9 +22,25 @@
     "continueWithGoogle": "Continue with Google",
     "checkEmailTitle": "Check your email",
     "checkEmailBody": "We sent a sign-in link to <highlight>{email}</highlight>. Open it on this device to continue.",
+    "spamHint": "Don't see it? Give it a minute, then check your spam or promotions folder.",
+    "resend": "Resend the link",
+    "resending": "Sending…",
+    "resendIn": "Resend in {seconds}s",
     "useDifferentEmail": "Use a different email",
-    "errorTitle": "That link didn't work",
-    "errorBody": "Sign-in links expire and can only be used once. Ask for a fresh one and you'll be right in.",
+    "error": {
+      "expired": {
+        "title": "That link didn't work",
+        "body": "Sign-in links expire and can only be used once. Ask for a fresh one and you'll be right in."
+      },
+      "cancelled": {
+        "title": "Sign-in was cancelled",
+        "body": "Looks like the sign-in window was closed before it finished. No harm done — give it another go."
+      },
+      "server": {
+        "title": "Couldn't complete sign-in",
+        "body": "Something went wrong on our side completing your sign-in. Try again in a moment."
+      }
+    },
     "backToSignIn": "Back to sign in"
   },
   "dashboard": {
@@ -188,6 +204,9 @@
     "usernameTaken": "That one's taken.",
     "usernameUnknown": "We'll confirm when you save.",
     "usernameChecking": "Checking availability…",
+    "usernameClearWarning": "Clearing your username removes your public profile at <handle></handle> and breaks every link you've shared to it.",
+    "usernameClearConfirm": "Yes, remove my public profile and break those links.",
+    "usernameClearBlocked": "Confirm you want to remove your public profile before saving.",
     "save": "Save profile",
     "saving": "Saving…"
   },

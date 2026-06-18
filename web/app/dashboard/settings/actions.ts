@@ -45,6 +45,22 @@ export async function updateProfile(
       return { status: "error", message: parsed.error.issues[0]?.message ?? "Check your username." };
     }
     username = parsed.data;
+  } else {
+    // Clearing the username deletes the public /u/<handle> and 404s every shared
+    // link, so it must be an explicit, confirmed choice — never a silent side
+    // effect of an empty field. The client sends `confirm_clear` only after the
+    // host confirms; without it (and only when they actually had a username) we
+    // block the write and report it so the field state isn't lost (H19).
+    const hadUsername = await supabase
+      .from("profiles")
+      .select("username")
+      .eq("id", user.id)
+      .maybeSingle();
+    const previous = hadUsername.data?.username ?? null;
+    const confirmed = String(formData.get("confirm_clear") ?? "") === "true";
+    if (previous && !confirmed) {
+      return { status: "error", message: "USERNAME_CLEAR_UNCONFIRMED" };
+    }
   }
 
   // UPDATE scoped to the caller's own row. id comes from auth.uid(), never the

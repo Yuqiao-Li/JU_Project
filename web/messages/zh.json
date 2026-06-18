@@ -22,9 +22,25 @@
     "continueWithGoogle": "使用 Google 继续",
     "checkEmailTitle": "去查收邮件吧",
     "checkEmailBody": "我们已经把登录链接发到了 <highlight>{email}</highlight>。在本设备上打开它即可继续。",
+    "spamHint": "没收到？稍等片刻，再看看垃圾邮件或推广邮件文件夹。",
+    "resend": "重新发送链接",
+    "resending": "发送中……",
+    "resendIn": "{seconds} 秒后可重发",
     "useDifferentEmail": "换个邮箱",
-    "errorTitle": "这个链接失效了",
-    "errorBody": "登录链接会过期，而且只能用一次。重新获取一个，马上就能进去。",
+    "error": {
+      "expired": {
+        "title": "这个链接失效了",
+        "body": "登录链接会过期，而且只能用一次。重新获取一个，马上就能进去。"
+      },
+      "cancelled": {
+        "title": "登录已取消",
+        "body": "看起来登录还没完成窗口就被关掉了。没关系，再试一次就好。"
+      },
+      "server": {
+        "title": "登录没能完成",
+        "body": "我们这边在完成登录时出了点问题。请稍后再试一次。"
+      }
+    },
     "backToSignIn": "返回登录"
   },
   "dashboard": {
@@ -188,6 +204,9 @@
     "usernameTaken": "这个已经被占用啦。",
     "usernameUnknown": "保存时我们会再帮你确认。",
     "usernameChecking": "正在查看是否可用……",
+    "usernameClearWarning": "清空用户名会删除你在 <handle></handle> 的公开主页，并让你分享过的所有相关链接全部失效。",
+    "usernameClearConfirm": "我确认：删除我的公开主页，并让那些链接失效。",
+    "usernameClearBlocked": "保存前请先确认你要删除公开主页。",
     "save": "保存资料",
     "saving": "保存中……"
   },

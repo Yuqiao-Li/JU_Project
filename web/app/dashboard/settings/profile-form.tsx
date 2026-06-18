@@ -29,8 +29,14 @@ export function ProfileForm({
   const [username, setUsername] = useState(initialUsername);
   // Set only from the async availability fetch, keyed to the input it answered.
   const [remote, setRemote] = useState<Remote>(null);
+  // Becomes true once the host confirms removing their public profile.
+  const [confirmedClear, setConfirmedClear] = useState(false);
 
   const trimmed = username.trim();
+  const hadUsername = initialUsername.trim() !== "";
+  // Clearing a previously-set username deletes the public /u/<handle>. We guard
+  // that as a deliberate, confirmed action — not a silent empty-field write (H19).
+  const clearingUsername = hadUsername && trimmed === "";
   const unchanged = trimmed === "" || trimmed.toLowerCase() === initialUsername.trim().toLowerCase();
   const local = validateUsername(trimmed);
 
@@ -113,7 +119,11 @@ export function ProfileForm({
             name="username"
             type="text"
             value={username}
-            onChange={(e) => setUsername(e.target.value)}
+            onChange={(e) => {
+              setUsername(e.target.value);
+              // Re-arm the guard whenever the field changes.
+              setConfirmedClear(false);
+            }}
             autoCapitalize="none"
             autoCorrect="off"
             spellCheck={false}
@@ -125,10 +135,35 @@ export function ProfileForm({
         <p className={`text-xs ${hintColor}`}>{hint.text}</p>
       </div>
 
+      {clearingUsername && (
+        <div className="flex flex-col gap-3 rounded-xl border border-coral/40 bg-coral/10 p-4">
+          <p className="text-sm text-paper">
+            {t.rich("usernameClearWarning", {
+              handle: () => (
+                <span className="font-mono text-paper">/u/{initialUsername.trim()}</span>
+              ),
+            })}
+          </p>
+          <label className="flex items-start gap-2 text-sm text-paper">
+            <input
+              type="checkbox"
+              checked={confirmedClear}
+              onChange={(e) => setConfirmedClear(e.target.checked)}
+              className="mt-0.5 h-4 w-4 shrink-0 accent-coral"
+            />
+            <span>{t("usernameClearConfirm")}</span>
+          </label>
+        </div>
+      )}
+
+      {/* Sent only when the host has explicitly confirmed the clear; the server
+          re-checks this before writing username=null (H19, defence in depth). */}
+      <input type="hidden" name="confirm_clear" value={clearingUsername && confirmedClear ? "true" : "false"} />
+
       <div className="flex items-center gap-4">
         <button
           type="submit"
-          disabled={pending}
+          disabled={pending || (clearingUsername && !confirmedClear)}
           className="h-12 rounded-xl bg-coral px-6 font-semibold text-ink transition hover:brightness-105 disabled:opacity-60"
         >
           {pending ? t("saving") : t("save")}
@@ -140,7 +175,7 @@ export function ProfileForm({
         )}
         {state.status === "error" && (
           <span role="alert" className="text-sm text-coral">
-            {state.message}
+            {state.message === "USERNAME_CLEAR_UNCONFIRMED" ? t("usernameClearBlocked") : state.message}
           </span>
         )}
       </div>
