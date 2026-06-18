@@ -4,6 +4,7 @@ import { useTranslations } from "next-intl";
 import { useActionState, useState } from "react";
 
 import { CoverUploader } from "@/components/events/cover-uploader";
+import { DateTimeField } from "@/components/events/date-time-field";
 import { DEFAULT_THEME, EFFECT_PRESETS, THEME_SWATCHES, type ThemeKey } from "@/lib/events/theme";
 import { isoToLocalInput } from "@/lib/events/timezone";
 
@@ -196,14 +197,13 @@ export function EventForm({ mode, defaults }: { mode: "create" | "edit"; default
             <label htmlFor="starts_at" className="text-sm text-muted">
               {t("startsLabel")}
             </label>
-            {/* Native datetime-local renders its placeholder in the field's `lang`; the app
-                is lang="zh", which makes Chrome show a mixed "yyyy/mm/日". Pin lang="en-CA" for
-                a consistent year-first yyyy-mm-dd. Display-side date formatting is separate (§7.4). */}
-            <input
+            {/* Custom field: display LOCKED to "yyyy/mm/dd HH:mm" (24h) for every locale,
+                unlike native datetime-local which follows the browser language. It still
+                submits the same naive "YYYY-MM-DDTHH:mm" string, so schema/timezone are
+                unchanged. Display-side date formatting elsewhere is separate (§7.4). */}
+            <DateTimeField
               id="starts_at"
               name="starts_at"
-              type="datetime-local"
-              lang="en-CA"
               disabled={dateTbd}
               defaultValue={toLocalInput(d.startsAt)}
               className={inputClass}
@@ -213,11 +213,9 @@ export function EventForm({ mode, defaults }: { mode: "create" | "edit"; default
             <label htmlFor="ends_at" className="text-sm text-muted">
               {t("endsLabel")} <span className="text-muted/60">{t("optional")}</span>
             </label>
-            <input
+            <DateTimeField
               id="ends_at"
               name="ends_at"
-              type="datetime-local"
-              lang="en-CA"
               disabled={dateTbd}
               defaultValue={toLocalInput(d.endsAt)}
               className={inputClass}
