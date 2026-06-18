@@ -196,10 +196,14 @@ export function EventForm({ mode, defaults }: { mode: "create" | "edit"; default
             <label htmlFor="starts_at" className="text-sm text-muted">
               {t("startsLabel")}
             </label>
+            {/* Native datetime-local renders its placeholder in the field's `lang`; the app
+                is lang="zh", which makes Chrome show a mixed "yyyy/mm/日". Pin lang="en-CA" for
+                a consistent year-first yyyy-mm-dd. Display-side date formatting is separate (§7.4). */}
             <input
               id="starts_at"
               name="starts_at"
               type="datetime-local"
+              lang="en-CA"
               disabled={dateTbd}
               defaultValue={toLocalInput(d.startsAt)}
               className={inputClass}
@@ -213,6 +217,7 @@ export function EventForm({ mode, defaults }: { mode: "create" | "edit"; default
               id="ends_at"
               name="ends_at"
               type="datetime-local"
+              lang="en-CA"
               disabled={dateTbd}
               defaultValue={toLocalInput(d.endsAt)}
               className={inputClass}
