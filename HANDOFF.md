@@ -272,3 +272,45 @@ curl -s -w '\nHTTP %{http_code}\n' 'https://<PROJECT>.supabase.co/rest/v1/rpc/ge
 | 6 | **公开发现页（大）** | 无全站发现入口；`app/page.tsx` 登录用户 redirect→dashboard、未登录只给 CTA。`/u/[username]` 已公开但只单主办。 | 新 `get_public_events` SECURITY DEFINER RPC（**迁移 0020**，只返 public+published 的一级字段:标题/主办/时间/城市/封面，**绝不含地址/名单**）+ 发现页 UI（任何人可看）+「新建活动」按钮 login-gated。 |
 
 **完成后**：写正式 Round-3 交接文档（本节即雏形），用户新开对话继续。
+
+---
+
+## 11. Round-3 完成（2026-06-18）+ 交接
+
+**Round-3 六项全部完成，合并入 master。** 每项走「实现 agent + 独立测试 agent + 全量门禁」。最终 **vitest 650/650、50 文件全绿**，check-boundaries **8/8**（含 DB 权威 RLS，迁移已到 **0020**，下一个 **0021**）。
+
+| # | 项 | 提交 | 决策 / 要点 |
+|---|---|---|---|
+| 4 | 用户名输入框双焦点环 | `a109269` | input 加 `focus-visible:outline-none`，容器 `focus-within:border-iris` 为唯一焦点指示 |
+| 5 | 时区友好命名标签 | `a109269` | 保留 §7.4 观看者本地；`when-format.ts` 三处 `timeZoneName:"short"`→`"shortGeneric"`：美国出 `ET/PT/CT/MT`（zh：`纽约时间/洛杉矶时间`），**不再裸 GMT**。SSR 回退态读 `GMT`（UTC 正名），内联脚本上线前改成本地名 |
+| 1 | magic-link 原页跳转 | `893677f` | 原标签**轮询** `getSession`（cookie 版 SSR 客户端跨标签靠共享 cookie，非 onAuthStateChange）→ 跳 dashboard；链接打开的标签落 `/auth/signed-in` 确认页；email 链接打 `flow=email` 标记，OAuth 不打（仍直进） |
+| 2 | OTP 验证码第二方式 | `893677f` | 「查收邮件」态加 6 位码输入 → `verifyOtp({type:"email"})` → 原标签内登录 |
+| 3 | magic-link 邮件美化 | `893677f` | `supabase/templates/magic_link.html`（JU 品牌、暗色、coral、含 `{{ .ConfirmationURL }}`+`{{ .Token }}`）+ config.toml。**云端需手动粘贴** |
+| 6 | 公开发现页 | `c1eb3fc` | `/discover`（任何人可看所有 public+published）+ `get_public_events()` RPC（迁移 **0020**，一级字段+host 名，绝不泄地址/名单）；「新建活动」按钮 login-gated（未登录→`/login?next=/dashboard/events/new`）。抽出共享 `<PublicEventCard>`，`/u/` 复用 |
+
+### 🔴 上线/生产生效前必做的手动步骤（我做不了）
+
+1. **`supabase db push`**——把**迁移 0020** 应用到云端。**否则生产 `/discover` 会报错**（`get_public_events` 不存在；与 §6 的「云端 schema 落后」同类）。这是合并 master、production 重部署后**必须立刻做**的。
+2. **粘贴邮件模板**：Supabase Dashboard → Authentication → Email Templates → **Magic Link**，贴入 `supabase/templates/magic_link.html` 的 HTML，主题 `你的 JU 登录链接 / Your JU sign-in link`。**这样 OTP 验证码（#2）才有 `{{ .Token }}` 可用、邮件才是品牌化的。**
+3. （已记于 §2/§9）Supabase Auth **Site URL + Redirect URLs** 指向正式/preview 域名（含 `/auth/callback` 和 `/**`）；Vercel 设 `NEXT_PUBLIC_SITE_URL`。
+4. （上线前）轮换 service_role/JWT secret（§2），轮换后把新 legacy key 回填 Vercel。
+
+### 浏览器验收清单（Round-3）
+
+- **时区**（真浏览器，非 IDE 内置）：活动时间显示成**你本地时区 + 友好名**（如 `7:30 PM ET` / `纽约时间`），无裸 GMT，刷新不闪。
+- **登录**：发链接 → 原标签自动跳 dashboard；邮件链接打开的标签显示「你已登录」；或在原标签输入邮件里的 6 位码也能登录。
+- **`/discover`**：未登录可浏览所有公开活动；点「新建活动」→ 未登录跳登录、已登录直接进创建。
+- **用户名输入框**：单一焦点环（不再双环错位）。
+
+### ⚠️ 注记 / 取舍
+
+- **IDE sandbox 卡骨架屏**：在 IDE 内置浏览器看生产页会卡 loading.tsx（iframe 禁脚本拦了 Next 流式换页脚本）——**非 bug**，真浏览器正常；我们无任何 CSP/sandbox 头。
+- **隐私**：`visibility=public` 活动**现在全站可发现**（从前仅「凭链接」）。若日后要「可凭链接、但不全站列出」，加第三档 `unlisted` 可见性 + RPC 过滤。
+- **跨设备 magic-link**：原页自动跳转只在**同浏览器**生效（共享 cookie）；跨设备退化为原行为（链接标签登录、原页不动）。
+- **时区友好名是城市名**（`纽约时间/洛杉矶时间`）而非区域名（美东/美西）——更贴合「显示用户所在地」；若想要区域名，加一张 US-zone→中文名小映射即可。
+
+### 还剩（上线后迭代，源头 AUDIT.md / §7.7 / §8）
+
+- §7.7 FUTURE：封面预设、生成式局卡、Google Maps 横向嵌入。
+- AUDIT 中/低：服务端报错文案 i18n（M3–M6）、无障碍扫除（M7–M12）、B6 账号解锁不含实时名单。
+- 可选硬化：发现页加分页/搜索；`unlisted` 第三档可见性。
