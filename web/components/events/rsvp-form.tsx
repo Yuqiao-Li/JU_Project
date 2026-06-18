@@ -159,6 +159,15 @@ export function RsvpForm({
   const hasReplied = confirmed != null || initial != null;
   const submitLabel = busy ? t("submitSaving") : hasReplied ? t("submitUpdate") : t("submitRsvp");
 
+  // `isFull` is an EVENT-level flag (capacity_remaining === 0), but `submit_rsvp`
+  // EXCLUDES the caller's own row from the occupancy check — so a viewer who ALREADY
+  // holds a going seat keeps it when they re-confirm. Only frame a 'going' reply as the
+  // waitlist for someone who isn't already going; otherwise the button would lie about
+  // their own re-confirmation costing them their seat (audit M26). The server-confirmed
+  // status (if any) wins over the cached one.
+  const viewerIsGoing = (confirmed?.status ?? initial?.status) === "going";
+  const framesWaitlist = isFull && !viewerIsGoing;
+
   return (
     <section id="rsvp" className="mt-10 rounded-2xl border border-line bg-surface/50 p-5 sm:p-6">
       <p className="eyebrow">{t("eyebrow")}</p>
@@ -166,7 +175,7 @@ export function RsvpForm({
       {confirmed ? (
         <p className="mt-2 font-medium text-paper">{confirmationLine(confirmed, t)}</p>
       ) : (
-        <p className="mt-2 text-paper/90">{isFull ? t("introFull") : t("intro")}</p>
+        <p className="mt-2 text-paper/90">{framesWaitlist ? t("introFull") : t("intro")}</p>
       )}
 
       <form onSubmit={onSubmit} className="mt-4 space-y-4">
@@ -190,7 +199,7 @@ export function RsvpForm({
                   }`}
                   style={selected ? { backgroundColor: accent } : undefined}
                 >
-                  {s === "going" && isFull ? t("joinWaitlist") : t(STATUS_LABEL_KEYS[s])}
+                  {s === "going" && framesWaitlist ? t("joinWaitlist") : t(STATUS_LABEL_KEYS[s])}
                 </button>
               );
             })}

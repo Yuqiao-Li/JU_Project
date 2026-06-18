@@ -36,6 +36,16 @@ export interface ReadEventOptions {
    * exposure beyond the trusted server.
    */
   passwordVerified?: boolean;
+  /**
+   * Trusted viewer identity (audit H16 / D1). Set ONLY to the logged-in user's
+   * `auth.uid()` after the server has authenticated the session; it lets
+   * `get_event_by_slug` unlock the event via the account branch
+   * (guests.user_id = viewer_id) WITHOUT a localStorage token, so a logged-in guest
+   * re-sees the unlocked tier across devices. The RPC honours it only for the
+   * service-role path (this helper IS that path), so an anon client passing it
+   * directly is ignored and can never self-unlock another account.
+   */
+  viewerId?: string | null;
 }
 
 /**
@@ -54,6 +64,7 @@ export async function readEventBySlug(
     guest_token: opts.guestToken ?? undefined,
     password: opts.password ?? undefined,
     password_verified: opts.passwordVerified ? true : undefined,
+    viewer_id: opts.viewerId ?? undefined,
   });
 
   if (error || data == null) return null;

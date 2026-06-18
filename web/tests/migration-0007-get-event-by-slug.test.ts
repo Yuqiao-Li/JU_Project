@@ -174,12 +174,15 @@ describe("task 1.5a [SECURITY]: get_event_by_slug tiered read path (TEST-SPEC §
     expect(hostB?.id, "need >=2 host sessions (host B, for the authenticated-non-host gate)").toBeTruthy();
 
     // Signature is pinned (SCHEMA RPC table): (slug, guest_token, password) plus the
-    // task-2.5 trusted bypass arg `password_verified` (migration 0015) appended last.
+    // task-2.5 trusted bypass arg `password_verified` (migration 0015) and the trusted
+    // account-unlock arg `viewer_id` (migration 0018, honored only for service_role),
+    // each appended last.
     expect(inArgNames(FN), "get_event_by_slug signature is pinned").toEqual([
       "slug",
       "guest_token",
       "password",
       "password_verified",
+      "viewer_id",
     ]);
     expect(inArgNames(FN_PW), "verify_event_password signature is pinned").toEqual(["slug", "password"]);
 

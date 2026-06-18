@@ -710,6 +710,7 @@ export type Database = {
           password?: string
           password_verified?: boolean
           slug: string
+          viewer_id?: string
         }
         Returns: Json
       }
@@ -720,7 +721,7 @@ export type Database = {
       get_my_events: { Args: never; Returns: Json }
       get_public_events_by_host: { Args: { username: string }; Returns: Json }
       guest_unlock_status: {
-        Args: { event_id: string; token?: string }
+        Args: { event_id: string; token?: string; viewer_id?: string }
         Returns: Record<string, unknown>
       }
       promote_guest: { Args: { rsvp_id: string }; Returns: Json }

@@ -8,6 +8,7 @@ import {
 import { readDatePoll } from "@/lib/events/read-date-poll";
 import { readEventBySlug } from "@/lib/events/read-event";
 import { readGuestList } from "@/lib/events/read-guest-list";
+import { createClient } from "@/lib/supabase/server";
 import { ipFromHeaders } from "@/lib/ratelimit/ip";
 import { rateLimit } from "@/lib/ratelimit/limiter";
 import { rateLimitedResponse } from "@/lib/ratelimit/guard";
@@ -55,7 +56,21 @@ export async function GET(
     ? verifyPasswordCredential(slug, credential, credentialSecret())
     : false;
 
-  const event = await readEventBySlug(slug, { guestToken, passwordVerified });
+  // A logged-in viewer's account unlocks across devices without a localStorage token
+  // (audit H16 / D1): the trusted read runs as service_role (auth.uid() null), so we pass
+  // the authenticated user's id as the trusted viewer_id and the RPC's account branch
+  // fires. Anon ⇒ null ⇒ no account unlock, exactly as before. The guest_token (when
+  // present) still wins the unlock; this only adds the account fallback.
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const event = await readEventBySlug(slug, {
+    guestToken,
+    passwordVerified,
+    viewerId: user?.id ?? null,
+  });
   if (!event) {
     return NextResponse.json(
       { error: "not_found" },

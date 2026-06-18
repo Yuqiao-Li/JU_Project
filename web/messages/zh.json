@@ -204,7 +204,10 @@
     "hostedBy": "{name} 发起",
     "privateBadge": "私密",
     "cancelledBanner": "活动已取消",
-    "endedBanner": "活动已结束"
+    "endedBanner": "活动已结束",
+    "unlockLoading": "正在加载活动详情…",
+    "unlockFailed": "活动详情没能加载出来。",
+    "unlockRetry": "刷新查看详情"
   },
   "rsvp": {
     "eyebrow": "回复",

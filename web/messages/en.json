@@ -204,7 +204,10 @@
     "hostedBy": "Hosted by {name}",
     "privateBadge": "Private",
     "cancelledBanner": "This event is cancelled",
-    "endedBanner": "This event has ended"
+    "endedBanner": "This event has ended",
+    "unlockLoading": "Loading the details…",
+    "unlockFailed": "Couldn’t load the event details.",
+    "unlockRetry": "Refresh to see the details"
   },
   "rsvp": {
     "eyebrow": "RSVP",

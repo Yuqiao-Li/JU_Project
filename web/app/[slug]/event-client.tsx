@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 
 import { EventView } from "./event-view";
 import { CommentsFeed } from "@/components/events/comments-feed";
@@ -54,6 +55,19 @@ interface EventSnapshot {
   poll: DatePollData | null;
 }
 
+/**
+ * Outcome of a tiered re-read, so callers can tell "unlock failed" from "re-locked".
+ *  - `ok`     — a fresh unlocked snapshot to apply.
+ *  - `locked` — the read came back as a password lock (credential cookie gone, task
+ *               2.5); IGNORED so we never clobber a good view with a re-locked one.
+ *  - `failed` — the read genuinely failed (network / non-ok / 404 / parse); the post-
+ *               submit path surfaces a retry rather than silently freezing (audit H14).
+ */
+type SnapshotResult =
+  | { kind: "ok"; snapshot: EventSnapshot }
+  | { kind: "locked" }
+  | { kind: "failed" };
+
 export function EventClient({
   slug,
   initialEvent,
@@ -77,20 +91,25 @@ export function EventClient({
    */
   ended?: boolean;
 }) {
+  const t = useTranslations("eventPage");
   const [event, setEvent] = useState<EventViewData>(initialEvent);
   const [guests, setGuests] = useState<GuestListEntry[]>([]);
   const [poll, setPoll] = useState<DatePollData | null>(initialPoll);
   const [record, setRecord] = useState<RsvpRecord | null>(null);
+  // Post-submit unlock progress (audit H14): "loading" while the re-read runs, "failed"
+  // when it genuinely fails (not a re-lock) so the guest gets a retry instead of a silent
+  // freeze. Idle the rest of the time (background polling never sets these).
+  const [unlockState, setUnlockState] = useState<"idle" | "loading" | "failed">("idle");
   const token = record?.token ?? null;
 
-  // Apply a fresh re-read. A null snapshot (failed / locked) is IGNORED so a transient
-  // error or a re-locked read never clobbers an already-unlocked view. The poll is only
-  // updated when the re-read actually carried one (a fixed-date event returns none).
-  const applySnapshot = useCallback((snap: EventSnapshot | null) => {
-    if (!snap) return;
-    setEvent(snap.event);
-    setGuests(snap.guests);
-    if (snap.poll) setPoll(snap.poll);
+  // Apply a fresh re-read. A `locked`/`failed` result is IGNORED so a transient error or
+  // a re-locked read never clobbers an already-unlocked view. The poll is only updated
+  // when the re-read actually carried one (a fixed-date event returns none).
+  const applySnapshot = useCallback((result: SnapshotResult) => {
+    if (result.kind !== "ok") return;
+    setEvent(result.snapshot.event);
+    setGuests(result.snapshot.guests);
+    if (result.snapshot.poll) setPoll(result.snapshot.poll);
   }, []);
 
   // localStorage is client-only, so the cached RSVP (and thus the unlocked re-read) can
@@ -151,10 +170,27 @@ export function EventClient({
     setRecord(rec);
 
     // Re-read with the (possibly newly minted) token to reveal the unlocked tier and the
-    // guest list now that this guest is on it.
-    const snap = await fetchSnapshot(slug, result.guest_token);
-    applySnapshot(snap);
+    // guest list now that this guest is on it. Show a brief loading state, and if the
+    // re-read GENUINELY fails (not a re-lock), surface a retry so the guest isn't left on
+    // a frozen first-tier page after a "You're in" with zero feedback (audit H14).
+    setUnlockState("loading");
+    const result2 = await fetchSnapshot(slug, result.guest_token);
+    applySnapshot(result2);
+    setUnlockState(result2.kind === "failed" ? "failed" : "idle");
   }
+
+  // Manual retry for a failed post-submit unlock (audit H14). Re-reads with the stored
+  // token; on success the unlocked tier appears, on failure the retry affordance stays.
+  const retryUnlock = useCallback(async () => {
+    if (!token) {
+      setUnlockState("idle");
+      return;
+    }
+    setUnlockState("loading");
+    const result = await fetchSnapshot(slug, token);
+    applySnapshot(result);
+    setUnlockState(result.kind === "failed" ? "failed" : "idle");
+  }, [slug, token, applySnapshot]);
 
   const accent = themeSwatch(themeColorFromJson(event.theme)).hex;
   const isFull = event.capacity_remaining === 0;
@@ -168,16 +204,38 @@ export function EventClient({
       event={event}
       ended={effectiveEnded}
       rsvpSlot={
-        <RsvpForm
-          slug={slug}
-          accent={accent}
-          rsvpEnabled={event.rsvp_enabled !== false}
-          allowPlusOnes={event.allow_plus_ones === true}
-          maxPlusOnes={event.max_plus_ones ?? 1}
-          isFull={isFull}
-          initial={record}
-          onSubmitted={handleSubmitted}
-        />
+        <>
+          <RsvpForm
+            slug={slug}
+            accent={accent}
+            rsvpEnabled={event.rsvp_enabled !== false}
+            allowPlusOnes={event.allow_plus_ones === true}
+            maxPlusOnes={event.max_plus_ones ?? 1}
+            isFull={isFull}
+            initial={record}
+            onSubmitted={handleSubmitted}
+          />
+          {unlockState === "loading" && (
+            <p role="status" className="mt-3 text-sm text-muted">
+              {t("unlockLoading")}
+            </p>
+          )}
+          {unlockState === "failed" && (
+            <div
+              role="alert"
+              className="mt-3 flex flex-wrap items-center gap-2 text-sm text-paper/90"
+            >
+              <span>{t("unlockFailed")}</span>
+              <button
+                type="button"
+                onClick={() => void retryUnlock()}
+                className="font-semibold text-iris underline-offset-2 hover:underline"
+              >
+                {t("unlockRetry")}
+              </button>
+            </div>
+          )}
+        </>
       }
       pollSlot={
         pollIsActive(poll) ? (
@@ -222,23 +280,29 @@ export function EventClient({
  * read failed / 404'd / came back locked — callers keep whatever they already show
  * rather than re-locking it.
  */
-async function fetchSnapshot(slug: string, token: string): Promise<EventSnapshot | null> {
+async function fetchSnapshot(slug: string, token: string): Promise<SnapshotResult> {
   try {
     const res = await fetch(
       `/api/events/${encodeURIComponent(slug)}?token=${encodeURIComponent(token)}`,
       { cache: "no-store" },
     );
-    if (!res.ok) return null;
+    if (!res.ok) return { kind: "failed" };
     const data: unknown = await res.json().catch(() => null);
     const obj = data && typeof data === "object" ? (data as Record<string, unknown>) : null;
     const parsed = eventViewSchema.safeParse(obj?.event);
-    if (!parsed.success || parsed.data.locked) return null;
+    if (!parsed.success) return { kind: "failed" };
+    // A re-locked password event (credential cookie gone, task 2.5): not a failure —
+    // we deliberately keep whatever good view we already show rather than re-locking it.
+    if (parsed.data.locked) return { kind: "locked" };
     return {
-      event: parsed.data,
-      guests: parseGuestList(obj?.guests),
-      poll: parseDatePoll(obj?.poll),
+      kind: "ok",
+      snapshot: {
+        event: parsed.data,
+        guests: parseGuestList(obj?.guests),
+        poll: parseDatePoll(obj?.poll),
+      },
     };
   } catch {
-    return null;
+    return { kind: "failed" };
   }
 }

@@ -167,9 +167,10 @@ describe("task 1.5.0 [SECURITY]: guest_unlock_status shared gate (TEST-SPEC §1.
     expect(hostB?.id, "need >=2 host sessions (host B)").toBeTruthy();
 
     const inArgs = inArgNames(FN);
-    // SCHEMA pins the signature as guest_unlock_status(event_id, token); the gate
-    // takes EXACTLY those two inputs — anything else (esp. `contact`) is a D1 hole.
-    expect(inArgs).toEqual([eventArg, tokenArg]);
+    // SCHEMA pins the gate as guest_unlock_status(event_id, token) plus the trusted
+    // account-unlock arg `viewer_id` (migration 0018, honored only for service_role).
+    // `contact` must NEVER be an input — that would be a D1 hole.
+    expect(inArgs).toEqual([eventArg, tokenArg, "viewer_id"]);
     expect(inArgs, "contact must never be an input to the gate (D1)").not.toContain("contact");
     [eventArg, tokenArg] = inArgs;
 

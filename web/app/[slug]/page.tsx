@@ -85,10 +85,23 @@ export default async function PublicEventPage({
     ? verifyPasswordCredential(slug, credential, credentialSecret())
     : false;
 
+  // A logged-in viewer's account unlocks the event across devices WITHOUT a localStorage
+  // token (audit H16 / D1): the SSR read goes through the trusted service role, where
+  // auth.uid() is null, so we pass the authenticated user's id as the trusted viewer_id
+  // and the RPC's account branch (guests.user_id = viewer_id) fires. Anon ⇒ null ⇒ no
+  // account unlock, exactly as before.
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
   // No token at SSR — the guest_token is client-only (localStorage) and never rides
   // in the URL. First tier is all this render can resolve (plus the password gate, which
-  // the credential above may open).
-  const event = await readEventBySlug(slug, { passwordVerified });
+  // the credential above may open, and the account unlock above).
+  const event = await readEventBySlug(slug, {
+    passwordVerified,
+    viewerId: user?.id ?? null,
+  });
   if (!event) notFound();
 
   // Drafts aren't public yet. (A locked payload omits `status`, so this only fires on
@@ -111,10 +124,6 @@ export default async function PublicEventPage({
   let initialPoll: DatePoll | null = null;
   let viewerIsHost = false;
   if (!event.locked) {
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
     if (user) {
       const { data: owned } = await supabase
         .from("events")
