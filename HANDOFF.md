@@ -145,7 +145,7 @@ curl -s -w '\nHTTP %{http_code}\n' 'https://<PROJECT>.supabase.co/rest/v1/rpc/ge
 2. 若 JWT secret 已按 §2 轮换，则复制**轮换后新发的** legacy service_role key。
 3. 确认值设给 **Preview** 作用域。
 4. **重新部署**（env 改动不会作用于已存在的 build）。重部署后同一 `/{slug}`（分享链接 + 以访客预览）应正常渲染。
-5. 可选硬化（不修也能解 404，下一会话顺手）：`DEPLOY.md` 明确写「用 legacy service_role JWT，别用 sb_secret」；考虑让 `read-event.ts` 区分「auth 错误」与「确实不存在」，**改成大声失败**而非静默 404（当前 `if (error || data == null) return null` 把 auth 错误吞了）。
+5. 硬化（**已完成 ✅，提交 `5623eb4`**；不修也能解 404，但能让任何环境下的复发自带诊断）：`read-event.ts` 现已区分「RPC/auth 错误」与「确实不存在」——遇到真正的 RPC 错误或 schema 漂移**大声失败（throw → 500 / `app/error.tsx`）**，只有 `data == null`（无 error）才返回 null（保留「私密 vs 不存在」不可区分性）。纯分类逻辑抽到新文件 `read-event-core.ts` 便于测试（独立 agent 写了 11 条黑盒测试钉住）。仿照仓库既有的 `read-public-events.ts`「ERROR vs EMPTY (H20)」模式。**这把旧的静默 404 变成会指明根因（service-role key 错/过期）的显式报错，但不替代上面 1–4 步的 Vercel env 修复。** 仍待办：`DEPLOY.md` 明确写「用 legacy service_role JWT，别用 sb_secret」。
 
 ### 还需排除的开放问题
 
@@ -161,9 +161,10 @@ curl -s -w '\nHTTP %{http_code}\n' 'https://<PROJECT>.supabase.co/rest/v1/rpc/ge
 
 ### 1. 🔴 [BLOCKER] 已发布活动的公开链接 + 「以访客预览」→ 404（真 bug）
 
-- **根因**：Vercel preview 上 `SUPABASE_SERVICE_ROLE_KEY` 错 / 过期 / 用了新格式 sb_secret；SSR service-role 读 `get_event_by_slug` 失败 → `read-event.ts:70` 静默返回 null → `[slug]/page.tsx` `notFound()`。详见 **§6**（含必跑诊断与修复步骤）。
-- **爆炸半径**：`web/lib/supabase/service.ts`（createServiceClient）、`web/lib/supabase/env.ts`（supabaseServiceRoleKey）、`web/lib/events/read-event.ts:70`（吞 auth 错误）、`web/app/[slug]/page.tsx`（null→notFound）、**Vercel env `SUPABASE_SERVICE_ROLE_KEY`（Preview 作用域）= 真正要改的东西**、`DEPLOY.md`（legacy vs sb_secret 说明）。
-- **先确认**：跑 §6 的 (A)/(B) curl 探针 + 解码 key。
+- **根因**：Vercel preview 上 `SUPABASE_SERVICE_ROLE_KEY` 错 / 过期 / 用了新格式 sb_secret；SSR service-role 读 `get_event_by_slug` 失败 →（**修前**）`read-event.ts:70` 静默返回 null → `[slug]/page.tsx` `notFound()`。详见 **§6**（含必跑诊断与修复步骤）。
+- **⚠️ 状态更新（提交 `5623eb4`）**：`read-event.ts` 已硬化为**大声失败**——RPC/auth 错误现在 throw（→ 500 / `error.tsx`）而非静默 404，旧的「:70 吞 null」路径**已不存在**（纯分类逻辑在新 `read-event-core.ts`，11 条黑盒测试）。**但 BLOCKER 本体仍未解：真正要改的是 Vercel preview 的 `SUPABASE_SERVICE_ROLE_KEY`**（legacy `eyJ…` JWT、Preview 作用域、重部署）——硬化只是把症状从「静默 404」变成「会报根因的 500」。
+- **爆炸半径**：`web/lib/supabase/service.ts`（createServiceClient）、`web/lib/supabase/env.ts`（supabaseServiceRoleKey）、`web/lib/events/read-event.ts` + 新 `web/lib/events/read-event-core.ts`（**已硬化：大声失败，提交 `5623eb4`**）、`web/app/[slug]/page.tsx`（null→notFound）、**Vercel env `SUPABASE_SERVICE_ROLE_KEY`（Preview 作用域）= 真正要改的东西**、`DEPLOY.md`（legacy vs sb_secret 说明）。
+- **先确认**：跑 §6 的 (A)/(B) curl 探针 + 解码 key（先跑 §6 第 0 步 SQL 看 status）。
 
 ### 2. 🟠 [HIGH] 主题色 + 特效在活动页不渲染
 
@@ -190,19 +191,19 @@ curl -s -w '\nHTTP %{http_code}\n' 'https://<PROJECT>.supabase.co/rest/v1/rpc/ge
 - **现状关键文件**：
   - `web/lib/events/timezone.ts:11-39` —— `EVENT_TIME_ZONE`/`EVENT_UTC_OFFSET`；`localInputToISO()` 给主办裸输入补**固定 +08:00**；`isoToLocalInput()` 按 Asia/Shanghai 回填。两者都要改成**浏览器本地偏移**。
   - `web/lib/events/format.ts:15-94` —— 四个 Intl 格式化器（pin 在 zh-CN + Asia/Shanghai）；`isEventEnded`（**纯瞬时比较、tz 无关、不用改**）、`formatEventWhen`/`formatEventDay`/`formatOptionWhen` 是要重做的显示面。
-  - `web/lib/events/comments.ts:90-104` —— `TIME_FMT` 同样 pin；`formatCommentTime` 在 `comments-feed.tsx:176-177` 的 `<time>` 内渲染（水合风险）。
+  - `web/lib/events/comments.ts:90-104` —— `TIME_FMT` 同样 pin；`formatCommentTime` 在 `web/components/events/comments-feed.tsx:176-177` 的 `<time>` 内渲染（水合风险）。
   - `web/lib/events/calendar.ts:120-160` —— **已正确**（emit UTC-basic `Z` 瞬时），**不要改、不要加 TZID**。
 - **SSR 水合风险点**（server 不知 viewer tz）：`event-view.tsx:61`（被 client shell `event-client.tsx` SSR）、`dashboard/page.tsx:193`、`dashboard/events/[id]/page.tsx:98`、`u/[username]/page.tsx:141`（均 server 组件，`formatEventWhen` per card）。
-- **主办输入 / 投票输入**：`event-form.tsx:65-67`（`isoToLocalInput` 预填）、`schema.ts:96-101`（`parseDateTime` 调 `localInputToISO`）；**另有真 bug** `date-actions.ts:22-27`：`addDateOption` 的 `parseDateTime` **不调 `localInputToISO`、把裸 datetime-local 串原样返回**给 RPC（与活动 start 的处理不一致），Option-3 下也要走相同的浏览器偏移→UTC 转换。
+- **主办输入 / 投票输入**：`event-form.tsx:65-67`（`isoToLocalInput` 预填）、`schema.ts:96-101`（`parseDateTime` 调 `localInputToISO`）；**另有真 bug** `web/app/dashboard/events/[id]/date-actions.ts:22-27`：`addDateOption` 的 `parseDateTime` **不调 `localInputToISO`、把裸 datetime-local 串原样返回**给 RPC（与活动 start 的处理不一致），Option-3 下也要走相同的浏览器偏移→UTC 转换。
 - **修复方向（一次成型，沿用 Next 16.2.9 LocalDate pattern）**：
   - **显示**：重写 `format.ts` 去掉 hardcode zh-CN+Asia/Shanghai，定义**一套**带 `timeZoneName:'short'`、无固定 timeZone（取 runtime）的 option set；把 `format*` 改成接收 `(instant, locale?, timeZone?)` 的**纯函数**便于测试，UI label 在 **client** 生成。
   - **水合安全渲染**：新建 `web/components/events/inline-script.tsx` + `web/components/events/local-when.tsx`（照 `preventing-flash-before-hydration.md`）：`LocalWhen`（client）渲染 `<time dateTime={iso} suppressHydrationWarning>{server fallback}</time>` + InlineScript 在首帧前用 `new Intl.DateTimeFormat(undefined,opts).format(new Date(iso))` 改 textContent；处理 `date_tbd`。把上面所有显示调用点换成 `<LocalWhen .../>`。
   - **主办输入**：`localInputToISO` 改读浏览器本地（`new Date(naive).toISOString()`）、`isoToLocalInput` 用本地 getters；因依赖浏览器，转换放 **client**（`event-form.tsx` 提交前转好，再让 `schema.ts` 校验 ISO）。
-  - **投票输入一致性**：修 `date-actions.ts:22-27`，poll start/end 走与活动 start 相同的转换（在 `date-poll-manager.tsx` client 端转好再 `addAction`）。
-  - **评论**：`comments-feed.tsx:176-177` 改用 `LocalWhen`/LocalTime。
+  - **投票输入一致性**：修 `web/app/dashboard/events/[id]/date-actions.ts:22-27`，poll start/end 走与活动 start 相同的转换（在 `date-poll-manager.tsx` client 端转好再 `addAction`）。
+  - **评论**：`web/components/events/comments-feed.tsx:176-177` 改用 `LocalWhen`/LocalTime。
   - **测试重写（独立 agent）**：`tests/task-3-timezone.test.ts` 当前断言旧北京契约（`localInputToISO('...19:30')==='...11:30Z'`、`EVENT_TIME_ZONE==='Asia/Shanghai'`、`formatEventWhen` 出「6月20日周六 19:30」），**全部重写**为 Option-3 契约（纯函数瞬时；输入测试 pin `process.env.TZ` 求确定性，如 `TZ=America/New_York`）。核对 `task-2.6-calendar`/`task-4.1-comments`/`task-4-lifecycle` 不受影响（应保持通过）。
   - 改掉 `timezone.ts`/`format.ts`/`comments.ts`/`schema.ts`/`event-form.tsx` 里仍写「北京 / Beijing / +08:00」的文件头注释。
-- **爆炸半径**：`timezone.ts`、`format.ts`（`isEventEnded` 不变）、`comments.ts`、新 `inline-script.tsx`/`local-when.tsx`、`event-view.tsx:61`、`dashboard/page.tsx:193`、`dashboard/events/[id]/page.tsx:98`、`u/[username]/page.tsx:141`、`date-poll.tsx:140`、`date-poll-manager.tsx:135`+`78-96`、`comments-feed.tsx:176-177`、`event-form.tsx:65-67`、`schema.ts:96-101`、`date-actions.ts:22-27`、`tests/task-3-timezone.test.ts`（重写）；**`calendar.ts`/`add-to-calendar.tsx` 不变**。
+- **爆炸半径**：`timezone.ts`、`format.ts`（`isEventEnded` 不变）、`comments.ts`、新 `inline-script.tsx`/`local-when.tsx`、`event-view.tsx:61`、`dashboard/page.tsx:193`、`dashboard/events/[id]/page.tsx:98`、`u/[username]/page.tsx:141`、`date-poll.tsx:140`、`date-poll-manager.tsx:135`+`78-96`、`web/components/events/comments-feed.tsx:176-177`、`event-form.tsx:65-67`、`schema.ts:96-101`、`web/app/dashboard/events/[id]/date-actions.ts:22-27`、`tests/task-3-timezone.test.ts`（重写）；**`calendar.ts`/`add-to-calendar.tsx` 不变**。
 - **先确认**：`cd web && grep -rn "Asia/Shanghai\|EVENT_TIME_ZONE\|+08:00\|zh-CN" lib app components | grep -v node_modules`（枚举所有 hardcode-北京点）；并用 `TZ=America/New_York npx vitest run tests/task-3-timezone.test.ts` 看旧契约基线。
 - **开放问题**：统一 label 用英文 / viewer locale / 双语；是否**现在**加 `events.time_zone` 列（让主办也能看活动地本地时区）还是纯 viewer-local 上线；新 tz-label 字符串别触发护栏禁词；`date-actions.ts` 既有裸串行为若被已有 poll 数据 / 测试依赖，确认迁移故事。
 
@@ -210,7 +211,7 @@ curl -s -w '\nHTTP %{http_code}\n' 'https://<PROJECT>.supabase.co/rest/v1/rpc/ge
 
 - **根因**：早前 i18n 批次把中国城市 / 地址 / 币种占位写进了 **`web/messages/zh.json`（仅此文件；`en.json` 已是美国正确）**。
 - **要改（仅 `zh.json`）**：`cityPlaceholder`（**第 111 行**）`"上海·徐汇"` → 美国城市（参 en 的 `Brooklyn, NY`，如「纽约·布鲁克林」）；`addressPlaceholder`（**第 114 行**）`"天台路 123 号 5 室"` → 美式地址（如「123 Rooftop Ave, Apt 5」或中字美式格式）；`chipInNotePlaceholder`（**第 127 行**）`"每人 10 元，包酒水和零食"` → **USD**（如「每人 10 美元，包酒水和零食」）。
-- **不要动**：`namePlaceholder`（小雨 / 陈小明，人名、文化中性）；`en.json`（已美国化）；`seed.sql`（已是 Brooklyn, NY，无中国占位）；**Venmo（北美正确，不要 flag）**。
+- **不要动**：`namePlaceholder`（小雨 / 陈小明，人名、文化中性）；`en.json`（已美国化，对应键在 111/114/127 行已是 `Brooklyn, NY` / `123 Rooftop Ave, Apt 5` / `$10 covers…`）；`seed.sql`（已是 Brooklyn, NY，无中国占位）；**Venmo（北美正确，不要 flag；注意它不在 messages 文件里，只在 `event-form.tsx`/`lib/events/schema.ts` 源码 — 本项爆炸半径之外）**。
 - **爆炸半径**：仅 `web/messages/zh.json`（111/114/127 行）。
 - **先确认**：`grep -nE "上海|徐汇|天台路|10 元|10元|￥|人民币" web/messages/zh.json`（预期命中 111/114/127）。
 - **开放问题**：具体选哪个美国城市（布鲁克林 / 湾区 / 洛杉矶）以匹配北美华人聚集地；zh 地址占位是保留中字 + 美式还是直接复用英文。
