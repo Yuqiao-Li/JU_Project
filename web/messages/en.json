@@ -142,6 +142,7 @@
     "saveChanges": "Save changes",
     "saveAsDraft": "Save as draft",
     "moveToDraft": "Move to draft",
+    "moveToDraftConfirm": "Moving this event back to draft will break its public/share link — visitors who open it will get a “page not found,” and it will be hidden from guests until you republish. Move it to draft anyway?",
     "saving": "Saving…",
     "pickDate": "Pick a date and time",
     "prevMonth": "Previous month",

@@ -142,6 +142,7 @@
     "saveChanges": "保存更改",
     "saveAsDraft": "存为草稿",
     "moveToDraft": "转为草稿",
+    "moveToDraftConfirm": "转为草稿会让这个活动的公开链接失效——访客点开会看到「找不到页面」,在你重新发布之前,客人也看不到它。确定要转为草稿吗?",
     "saving": "保存中…",
     "pickDate": "选择日期和时间",
     "prevMonth": "上一个月",

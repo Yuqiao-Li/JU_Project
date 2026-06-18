@@ -436,6 +436,14 @@ export function EventForm({ mode, defaults }: { mode: "create" | "edit"; default
           name="intent"
           value="draft"
           disabled={pending}
+          onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
+            // Moving a currently-published event to draft silently unpublishes it:
+            // the public /{slug} page 404s and shared invite links die. Guard with a
+            // confirm so hosts can't do it by accident. Drafts/create never prompt.
+            if (mode === "edit" && d.status === "published" && !window.confirm(t("moveToDraftConfirm"))) {
+              e.preventDefault();
+            }
+          }}
           className="h-12 rounded-xl border border-line px-6 font-semibold text-paper transition hover:bg-surface-2 disabled:opacity-60"
         >
           {draftLabel}
