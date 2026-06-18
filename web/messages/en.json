@@ -28,6 +28,14 @@
     "resending": "Sending…",
     "resendIn": "Resend in {seconds}s",
     "useDifferentEmail": "Use a different email",
+    "otpLabel": "Or enter the code from the email",
+    "otpPlaceholder": "6-digit code",
+    "verifyCode": "Verify and sign in",
+    "verifying": "Verifying…",
+    "otpError": "That code is wrong or expired. Try again or resend.",
+    "signedInTitle": "You're signed in",
+    "signedInBody": "You can head back to the tab you started in, or",
+    "signedInCta": "Go to my events",
     "error": {
       "expired": {
         "title": "That link didn't work",

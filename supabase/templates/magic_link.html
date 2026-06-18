@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="zh">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="dark" />
+    <title>JU sign-in</title>
+  </head>
+  <body style="margin:0; padding:0; background-color:#15101e;">
+    <!-- Full-bleed dark ink backdrop -->
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#15101e;">
+      <tr>
+        <td align="center" style="padding:40px 16px;">
+          <!-- Card -->
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:440px; width:100%; background-color:#1d1729; border-radius:16px; border:1px solid #2c2540;">
+            <tr>
+              <td style="padding:36px 32px 28px 32px; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+
+                <!-- Wordmark -->
+                <p style="margin:0 0 28px 0; font-size:26px; font-weight:800; letter-spacing:-0.5px; color:#fbf6f1;">
+                  JU<span style="color:#ff6a5c;">*</span>
+                </p>
+
+                <!-- Heading + line -->
+                <h1 style="margin:0 0 12px 0; font-size:20px; font-weight:700; color:#fbf6f1;">
+                  登录 JU / Sign in to JU
+                </h1>
+                <p style="margin:0 0 28px 0; font-size:15px; line-height:1.6; color:#c9c2d6;">
+                  点下面的按钮就能登录。<br />
+                  Tap the button below to sign in.
+                </p>
+
+                <!-- Primary button -->
+                <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                  <tr>
+                    <td align="center" bgcolor="#ff6a5c" style="border-radius:12px;">
+                      <a href="{{ .ConfirmationURL }}"
+                         style="display:inline-block; padding:14px 28px; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:15px; font-weight:700; color:#15101e; text-decoration:none; border-radius:12px;">
+                        登录 / Sign in
+                      </a>
+                    </td>
+                  </tr>
+                </table>
+
+                <!-- Verification code -->
+                <p style="margin:28px 0 8px 0; font-size:13px; color:#9a93a8;">
+                  或在登录页输入这个验证码 / Or enter this code on the sign-in page:
+                </p>
+                <p style="margin:0 0 28px 0; font-size:30px; font-weight:700; letter-spacing:8px; color:#fbf6f1;">
+                  {{ .Token }}
+                </p>
+
+                <!-- Plain-text fallback URL -->
+                <hr style="border:none; border-top:1px solid #2c2540; margin:0 0 20px 0;" />
+                <p style="margin:0 0 6px 0; font-size:12px; line-height:1.6; color:#9a93a8;">
+                  按钮打不开？复制这个链接到浏览器 / Button not working? Paste this link into your browser:
+                </p>
+                <p style="margin:0; font-size:12px; line-height:1.6; word-break:break-all;">
+                  <a href="{{ .ConfirmationURL }}" style="color:#ff6a5c; text-decoration:underline;">{{ .ConfirmationURL }}</a>
+                </p>
+
+              </td>
+            </tr>
+          </table>
+
+          <!-- Footer -->
+          <p style="max-width:440px; margin:20px auto 0 auto; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:12px; line-height:1.6; color:#6f677e; text-align:center;">
+            没申请过登录链接？忽略这封邮件就好。<br />
+            Didn't request this? You can safely ignore this email.
+          </p>
+
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>

@@ -41,12 +41,29 @@ function errorRedirect(origin: string, reason: string): NextResponse {
   return NextResponse.redirect(`${origin}/auth/auth-code-error?${params.toString()}`);
 }
 
+/**
+ * Where to land after a successful sign-in. Email magic links open a NEW tab, so
+ * they go to the "you're signed in" interstitial (the original tab redirects
+ * itself once it detects the session). Google OAuth is a same-tab redirect, so it
+ * goes straight to `next`. We distinguish them via the `flow=email` marker the
+ * login form adds to the magic-link callback URL; the `token_hash` OTP branch is
+ * always an email link, so it always uses the interstitial.
+ */
+function successRedirect(origin: string, next: string, isEmail: boolean): NextResponse {
+  if (isEmail) {
+    return NextResponse.redirect(`${origin}/auth/signed-in?next=${encodeURIComponent(next)}`);
+  }
+  return NextResponse.redirect(`${origin}${next}`);
+}
+
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = request.nextUrl;
   const next = safeNext(searchParams.get("next"));
   const code = searchParams.get("code");
   const tokenHash = searchParams.get("token_hash");
   const type = searchParams.get("type");
+  // The login form tags email magic links with `flow=email`; OAuth omits it.
+  const isEmailFlow = searchParams.get("flow") === "email";
 
   // Provider/OTP errors come back as query params, frequently without a `code`.
   const providerError = searchParams.get("error");
@@ -66,7 +83,8 @@ export async function GET(request: NextRequest) {
 
   if (code) {
     const { error } = await supabase.auth.exchangeCodeForSession(code);
-    if (!error) return NextResponse.redirect(`${origin}${next}`);
+    // `code` covers both OAuth and PKCE magic links; `flow=email` tells them apart.
+    if (!error) return successRedirect(origin, next, isEmailFlow);
     console.error(`[auth/callback] code exchange failed: ${error.message}`);
     return errorRedirect(origin, "expired");
   } else if (tokenHash && type && ALLOWED_OTP_TYPES.has(type)) {
@@ -74,7 +92,8 @@ export async function GET(request: NextRequest) {
       type: type as EmailOtpType,
       token_hash: tokenHash,
     });
-    if (!error) return NextResponse.redirect(`${origin}${next}`);
+    // A token_hash link is always email → always use the interstitial.
+    if (!error) return successRedirect(origin, next, true);
     console.error(`[auth/callback] OTP verify failed: ${error.message}`);
     return errorRedirect(origin, "expired");
   }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { createClient } from "@/lib/supabase/client";
 
@@ -9,6 +9,13 @@ type Status = { kind: "idle" } | { kind: "sending" } | { kind: "sent" } | { kind
 
 /** Cooldown (seconds) before a magic link can be re-sent. */
 const RESEND_COOLDOWN_SECONDS = 45;
+
+/**
+ * How often (ms) the "sent" state polls for a session. The browser client stores
+ * auth in COOKIES (@supabase/ssr), so a sign-in completed in the link-opened tab
+ * does NOT fire `onAuthStateChange` here — polling is the reliable cross-tab signal.
+ */
+const SESSION_POLL_MS = 2500;
 
 /**
  * Resolve the origin used to build the auth callback URL. In production behind a
@@ -34,6 +41,19 @@ export function LoginForm({ next }: { next: string }) {
   // Seconds remaining on the resend cooldown; 0 means a resend is allowed.
   const [cooldown, setCooldown] = useState(0);
   const [resending, setResending] = useState(false);
+  // 6-digit verification code path (an alternative to clicking the link).
+  const [code, setCode] = useState("");
+  const [verifying, setVerifying] = useState(false);
+  const [otpError, setOtpError] = useState<string | null>(null);
+  // Guard so the cross-tab redirect fires exactly once.
+  const redirectedRef = useRef(false);
+
+  // Full navigation so the server picks up the freshly-set auth cookies.
+  const goToNext = useCallback(() => {
+    if (redirectedRef.current) return;
+    redirectedRef.current = true;
+    window.location.assign(next);
+  }, [next]);
 
   // Tick the cooldown down to zero.
   useEffect(() => {
@@ -44,22 +64,79 @@ export function LoginForm({ next }: { next: string }) {
     return () => clearInterval(timer);
   }, [cooldown]);
 
-  function callbackUrl(): string {
+  // While the "sent" state is shown, detect a sign-in that completed in ANOTHER
+  // tab (the magic link opens a new tab) and redirect this original tab to `next`.
+  // Cookies don't fire onAuthStateChange cross-tab, so we poll getSession; we also
+  // keep a SIGNED_IN listener for the same-tab OTP path (FIX #2).
+  useEffect(() => {
+    if (status.kind !== "sent") return;
+    const supabase = createClient();
+    let active = true;
+
+    const checkSession = async () => {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (active && session) goToNext();
+    };
+
+    // Check immediately, then on an interval.
+    void checkSession();
+    const timer = setInterval(checkSession, SESSION_POLL_MS);
+    const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "SIGNED_IN" && session) goToNext();
+    });
+
+    return () => {
+      active = false;
+      clearInterval(timer);
+      sub.subscription.unsubscribe();
+    };
+  }, [status.kind, goToNext]);
+
+  // Email magic links carry `flow=email` so the callback can send them to the
+  // "you're signed in" interstitial; Google OAuth (same-tab) omits it and lands
+  // straight on `next`.
+  function callbackUrl(flow?: "email"): string {
     const params = new URLSearchParams({ next });
+    if (flow) params.set("flow", flow);
     return `${siteOrigin()}/auth/callback?${params.toString()}`;
   }
 
-  // Shared OTP send used by the initial submit and the resend button.
+  // Shared OTP send used by the initial submit and the resend button. The link
+  // it emails carries `flow=email` so the callback routes it to the interstitial.
   const sendOtp = useCallback(async (): Promise<{ error: string | null }> => {
     const supabase = createClient();
     const { error } = await supabase.auth.signInWithOtp({
       email: email.trim(),
-      options: { emailRedirectTo: callbackUrl() },
+      options: { emailRedirectTo: callbackUrl("email") },
     });
     return { error: error?.message ?? null };
     // callbackUrl reads `next` (stable prop) + `email`; email is the only dep.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [email, next]);
+
+  // Finish sign-in WITHOUT leaving this tab by entering the 6-digit code from
+  // the email. signInWithOtp emails both a link and this token (FIX #2/#3).
+  async function verifyCode(event: React.FormEvent) {
+    event.preventDefault();
+    if (verifying) return;
+    setVerifying(true);
+    setOtpError(null);
+    const supabase = createClient();
+    const { error } = await supabase.auth.verifyOtp({
+      email: email.trim(),
+      token: code.trim(),
+      type: "email",
+    });
+    if (error) {
+      setVerifying(false);
+      setOtpError(t("otpError"));
+      return;
+    }
+    // Session is now set in THIS tab — go straight to the dashboard.
+    goToNext();
+  }
 
   async function sendMagicLink(event: React.FormEvent) {
     event.preventDefault();
@@ -108,6 +185,37 @@ export function LoginForm({ next }: { next: string }) {
           })}
         </p>
         <p className="mt-3 text-sm text-muted">{t("spamHint")}</p>
+
+        {/* Or finish without leaving this tab: type the 6-digit code. */}
+        <form onSubmit={verifyCode} className="mt-5 flex flex-col gap-3 text-left">
+          <label htmlFor="otp" className="eyebrow text-center">
+            {t("otpLabel")}
+          </label>
+          <input
+            id="otp"
+            type="text"
+            inputMode="numeric"
+            autoComplete="one-time-code"
+            maxLength={6}
+            value={code}
+            onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
+            placeholder={t("otpPlaceholder")}
+            className="h-12 rounded-xl border border-line bg-surface-2 px-4 text-center text-lg tracking-[0.4em] text-paper placeholder:tracking-normal placeholder:text-muted/60 focus:border-iris focus:outline-none"
+          />
+          <button
+            type="submit"
+            disabled={verifying || code.trim().length < 6}
+            className="h-11 rounded-xl bg-coral px-5 font-semibold text-ink transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {verifying ? t("verifying") : t("verifyCode")}
+          </button>
+          {otpError && (
+            <p role="alert" className="text-center text-sm text-coral">
+              {otpError}
+            </p>
+          )}
+        </form>
+
         <div className="mt-5 flex flex-col items-center gap-3">
           <button
             type="button"
@@ -123,6 +231,8 @@ export function LoginForm({ next }: { next: string }) {
             onClick={() => {
               setStatus({ kind: "idle" });
               setCooldown(0);
+              setCode("");
+              setOtpError(null);
             }}
             className="text-sm font-medium text-iris underline-offset-4 hover:underline"
           >

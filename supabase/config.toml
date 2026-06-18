@@ -243,6 +243,14 @@ otp_expiry = 3600
 # admin_email = "admin@email.com"
 # sender_name = "Admin"
 
+# Branded magic-link / OTP email. Carries both {{ .ConfirmationURL }} (the link)
+# and {{ .Token }} (the 6-digit code the login form's "verify code" path uses).
+# Applies to LOCAL on `supabase db reset`/`start`; the CLOUD project needs the same
+# HTML pasted into Dashboard → Auth → Email Templates → Magic Link (manual step).
+[auth.email.template.magic_link]
+subject = "你的 JU 登录链接 / Your JU sign-in link"
+content_path = "./supabase/templates/magic_link.html"
+
 # Uncomment to customize email template
 # [auth.email.template.invite]
 # subject = "You have been invited"

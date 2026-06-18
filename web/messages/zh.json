@@ -28,6 +28,14 @@
     "resending": "发送中……",
     "resendIn": "{seconds} 秒后可重发",
     "useDifferentEmail": "换个邮箱",
+    "otpLabel": "或输入邮件里的验证码",
+    "otpPlaceholder": "6 位验证码",
+    "verifyCode": "验证并登录",
+    "verifying": "验证中…",
+    "otpError": "验证码不对或已过期，重试或重新发送。",
+    "signedInTitle": "你已登录",
+    "signedInBody": "可以回到刚才的标签页继续,或",
+    "signedInCta": "前往我的活动",
     "error": {
       "expired": {
         "title": "这个链接失效了",
