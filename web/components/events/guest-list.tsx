@@ -1,4 +1,6 @@
-import { getTranslations } from "next-intl/server";
+"use client";
+
+import { useTranslations } from "next-intl";
 
 import {
   groupGuestList,
@@ -26,8 +28,15 @@ import {
  * which re-fetches via the tiered poll endpoint — never a realtime subscription or a
  * direct table read (D4). New arrivals fade in on the next poll (reduced-motion honored
  * globally).
+ *
+ * CLIENT COMPONENT (`"use client"`). It's rendered as a child slot of the client shell
+ * `EventClient`, so it lives in the client tree — it MUST use the client `useTranslations`
+ * hook, never the server-only `getTranslations` (which throws "'getTranslations' is not
+ * supported in Client Components" the instant an UNLOCKED viewer makes the list render —
+ * e.g. the logged-in host whose account unlocks the event at SSR). Data still arrives via
+ * props from the trusted-role poll, so this stays purely presentational.
  */
-export async function GuestList({
+export function GuestList({
   guests,
   unlocked,
   hidden,
@@ -44,12 +53,15 @@ export async function GuestList({
   /** Host accent (events.theme.color) for the +1 badge tint. */
   accent: string;
 }) {
+  // Hook first (Rules of Hooks): useTranslations must run unconditionally, before the
+  // early returns below.
+  const t = useTranslations("feed");
+
   // Locked viewers never see the list — and the data layer never sent it. The host can
   // also hide the list outright (hide_guest_list); the RPC returns [] then, so we render
   // no section rather than a misleading "no replies yet". Either way: nothing to render.
   if (!unlocked || hidden) return null;
 
-  const t = await getTranslations("feed");
   const { going, maybe } = groupGuestList(guests);
 
   return (
