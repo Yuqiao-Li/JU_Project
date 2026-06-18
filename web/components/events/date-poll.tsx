@@ -4,7 +4,8 @@ import { useTranslations } from "next-intl";
 import { useEffect, useRef, useState } from "react";
 
 import { type DatePoll as DatePollData } from "@/lib/events/date-poll";
-import { formatOptionWhen } from "@/lib/events/format";
+
+import { LocalWhenRange } from "./local-when";
 
 /**
  * Date poll (task 5.1) — the public event page's "when works for you?" vote.
@@ -137,7 +138,9 @@ export function DatePoll({
                   className="size-4 accent-coral"
                   style={checked ? { accentColor: accent } : undefined}
                 />
-                <span className="min-w-0 flex-1 text-paper">{formatOptionWhen(o.starts_at, o.ends_at)}</span>
+                <span className="min-w-0 flex-1 text-paper">
+                  <LocalWhenRange startsAt={o.starts_at} endsAt={o.ends_at} />
+                </span>
                 <span className="shrink-0 text-sm text-muted">
                   {t("voteCount", { count: o.votes })}
                 </span>

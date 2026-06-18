@@ -4,7 +4,8 @@
     "description": "Make an event, share a link, watch the yeses roll in. Guests RSVP without an account."
   },
   "common": {
-    "language": "Language"
+    "language": "Language",
+    "dateTbd": "Date TBD"
   },
   "home": {
     "tagline": "Throw something good.",

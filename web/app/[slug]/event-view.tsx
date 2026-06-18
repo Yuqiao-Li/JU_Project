@@ -2,8 +2,8 @@ import { useTranslations } from "next-intl";
 
 import { AddToCalendar } from "@/components/events/add-to-calendar";
 import { EventEffect } from "@/components/events/event-effect";
+import { LocalWhen } from "@/components/events/local-when";
 import { spotsLeftLabel } from "@/lib/events/capacity";
-import { formatEventWhen } from "@/lib/events/format";
 import { themeColorFromJson, themeSwatch } from "@/lib/events/theme";
 import type { EventView } from "@/lib/events/view";
 
@@ -59,7 +59,6 @@ export function EventView({
 }) {
   const t = useTranslations("eventPage");
   const accent = themeSwatch(themeColorFromJson(event.theme)).hex;
-  const when = formatEventWhen(event.starts_at ?? null, event.date_tbd ?? false);
   const isPrivate = event.visibility === "private";
   // A cancelled (audit B4) or ended (H4) event renders read-only: a banner, no RSVP,
   // no voting, no add-to-calendar — the guest list + feed stay visible for reference.
@@ -79,7 +78,7 @@ export function EventView({
   return (
     <article className="mx-auto w-full max-w-2xl px-5 py-10 sm:px-8 sm:py-14">
       {/* ── Hero / poster: the signature element ─────────────────────────────── */}
-      <Hero event={event} accent={accent} when={when} isPrivate={isPrivate} />
+      <Hero event={event} accent={accent} isPrivate={isPrivate} />
 
       {/* ── Cancelled / ended banner (audit B4/H4) ───────────────────────────── */}
       {inactive && (
@@ -200,15 +199,16 @@ export function EventView({
 function Hero({
   event,
   accent,
-  when,
   isPrivate,
 }: {
   event: EventView;
   accent: string;
-  when: string;
   isPrivate: boolean;
 }) {
   const t = useTranslations("eventPage");
+  const common = useTranslations("common");
+  // A date-TBD event (or one with no start yet) reads "Date TBD" in the viewer's locale.
+  const whenIso = event.date_tbd ? null : event.starts_at ?? null;
   const cover = event.cover_image_url ?? null;
   const surface = cover
     ? { backgroundImage: `url(${JSON.stringify(cover)})` }
@@ -248,7 +248,7 @@ function Hero({
           {event.title}
         </h1>
         <p className="mt-2 font-medium" style={{ color: accent }}>
-          {when}
+          <LocalWhen iso={whenIso} tbdLabel={common("dateTbd")} />
         </p>
         {event.location_city && <p className="mt-0.5 text-muted">{event.location_city}</p>}
       </div>

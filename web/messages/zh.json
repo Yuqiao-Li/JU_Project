@@ -4,7 +4,8 @@
     "description": "建活动、发链接，看着「来」一个个冒出来。访客无需注册即可回复。"
   },
   "common": {
-    "language": "语言"
+    "language": "语言",
+    "dateTbd": "日期待定"
   },
   "home": {
     "tagline": "办一场好局。",

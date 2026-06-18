@@ -4,8 +4,8 @@ import { getTranslations } from "next-intl/server";
 
 import { signOut } from "@/app/auth/actions";
 import { Wordmark } from "@/components/brand/wordmark";
+import { LocalWhen } from "@/components/events/local-when";
 import { groupEventsByTime, parseMyEvents, type MyEvent } from "@/lib/events/feed";
-import { formatEventWhen } from "@/lib/events/format";
 import { createClient } from "@/lib/supabase/server";
 
 /**
@@ -32,6 +32,8 @@ export default async function DashboardPage() {
     .maybeSingle();
 
   const t = await getTranslations("dashboard");
+  const common = await getTranslations("common");
+  const dateTbdLabel = common("dateTbd");
 
   const greetingName = profile?.display_name?.trim() || user.email?.split("@")[0] || "host";
 
@@ -104,6 +106,7 @@ export default async function DashboardPage() {
               roleLabels={{ hosting: t("role.hosting"), going: t("role.going") }}
               privateLabel={t("badge.private")}
               locationSeparator={t("card.locationSeparator")}
+              dateTbdLabel={dateTbdLabel}
               t={t}
             />
             {past.length > 0 && (
@@ -114,6 +117,7 @@ export default async function DashboardPage() {
                 roleLabels={{ hosting: t("role.hosting"), going: t("role.going") }}
                 privateLabel={t("badge.private")}
                 locationSeparator={t("card.locationSeparator")}
+                dateTbdLabel={dateTbdLabel}
                 t={t}
               />
             )}
@@ -135,6 +139,7 @@ function EventSection({
   roleLabels,
   privateLabel,
   locationSeparator,
+  dateTbdLabel,
   t,
 }: {
   title: string;
@@ -144,6 +149,7 @@ function EventSection({
   roleLabels: RoleLabels;
   privateLabel: string;
   locationSeparator: string;
+  dateTbdLabel: string;
   t: Translator;
 }) {
   return (
@@ -161,6 +167,7 @@ function EventSection({
                 roleLabels={roleLabels}
                 privateLabel={privateLabel}
                 locationSeparator={locationSeparator}
+                dateTbdLabel={dateTbdLabel}
                 t={t}
               />
             </li>
@@ -177,6 +184,7 @@ function EventCard({
   roleLabels,
   privateLabel,
   locationSeparator,
+  dateTbdLabel,
   t,
 }: {
   event: MyEvent;
@@ -184,13 +192,14 @@ function EventCard({
   roleLabels: RoleLabels;
   privateLabel: string;
   locationSeparator: string;
+  dateTbdLabel: string;
   t: Translator;
 }) {
   const isHost = event.role === "host";
   // A host owns the event → land on the management detail page; an attendee opens
   // the public page they RSVP'd through (the slug is the shareable credential).
   const href = isHost ? `/dashboard/events/${event.id}` : `/${event.slug}`;
-  const when = formatEventWhen(event.starts_at, event.date_tbd);
+  const whenIso = event.date_tbd ? null : event.starts_at;
 
   return (
     <Link
@@ -214,7 +223,7 @@ function EventCard({
       </div>
       <h3 className="mt-3 font-display text-lg font-bold text-paper">{event.title}</h3>
       <p className="mt-1 text-sm text-muted">
-        {when}
+        <LocalWhen iso={whenIso} tbdLabel={dateTbdLabel} />
         {event.location_city ? `${locationSeparator}${event.location_city}` : ""}
       </p>
       {isHost && typeof event.going_count === "number" && (

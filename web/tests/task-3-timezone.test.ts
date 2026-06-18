@@ -1,11 +1,5 @@
 import { describe, expect, it } from "vitest";
 
-import { formatCommentTime } from "../lib/events/comments";
-import {
-  formatEventDay,
-  formatEventWhen,
-  formatOptionWhen,
-} from "../lib/events/format";
 import { parseEventForm } from "../lib/events/schema";
 import {
   EVENT_TIME_ZONE,
@@ -126,118 +120,11 @@ describe("Batch 3 [TIMEZONE]: datetime-local is read as Beijing wall-clock and s
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Display: zh-CN pinned to Asia/Shanghai, identical for every viewer / process tz.
+// NOTE: the DISPLAY half of this suite — the old, Beijing-pinned formatEventWhen /
+// formatEventDay / formatOptionWhen / formatCommentTime — was REMOVED in Round-2 §7.4
+// (Pass A). Display now goes through the viewer-local pure module lib/events/when-format.ts
+// (+ client components), so those formatters no longer exist. Their replacement coverage
+// lives in tests/when-format.test.ts. What REMAINS above is the INPUT path
+// (localInputToISO / isoToLocalInput / EVENT_TIME_ZONE / parseEventForm), which Pass A
+// leaves UNCHANGED (still the +08:00 Beijing read) — Pass B revisits it later.
 // ─────────────────────────────────────────────────────────────────────────────
-
-/** A fresh en-US, Asia/Shanghai formatter — the same instant rendered through it must
- *  DIFFER from the zh-CN output, proving the implementation isn't honouring en-US. */
-const EN_US_SH = new Intl.DateTimeFormat("en-US", {
-  timeZone: EVENT_TIME_ZONE,
-  weekday: "short",
-  month: "short",
-  day: "numeric",
-  hour: "2-digit",
-  minute: "2-digit",
-  hourCycle: "h23",
-});
-
-describe("Batch 3 [TIMEZONE]: events render in zh-CN pinned to Asia/Shanghai — the Beijing wall-clock, identical regardless of process tz (TEST-SPEC §3)", () => {
-  it("formatEventWhen renders the keystone instant as the Beijing wall-clock in zh-CN (6月20日 周六 19:30) — a wrong tz or en-US locale fails this", () => {
-    const when = formatEventWhen(UTC_INSTANT, false);
-    // The Beijing wall-clock digits + Chinese month/day glyphs must be present.
-    expect(when, "contains the Beijing time 19:30").toContain("19:30");
-    expect(when, "zh-CN month glyph 月").toContain("月");
-    expect(when, "zh-CN day-of-month 20日").toContain("20日");
-    expect(when, "zh-CN weekday glyph 周 (Sat = 周六)").toContain("周");
-    // It must NOT carry the UTC hour (11:30) — that's the wrong-zone bug.
-    expect(when, "never the raw UTC hour 11:30").not.toContain("11:30");
-    // And it must NOT equal an en-US render of the same instant (wrong-locale bug).
-    expect(when, "render is zh-CN, not en-US").not.toBe(EN_US_SH.format(Date.parse(UTC_INSTANT)));
-    expect(when, "no English weekday/month leaks (zh-CN)").not.toMatch(/Sat|Jun/);
-  });
-
-  it("formatEventWhen is process-tz invariant — it depends ONLY on the instant, never on the host machine's clock", () => {
-    // (We can't re-exec under a different TZ from here, so we prove invariance structurally:
-    //  the output equals the zh-CN/Asia-Shanghai render of the instant, which by definition
-    //  ignores the process tz — and we already pin those exact glyphs above.)
-    const expected = new Intl.DateTimeFormat("zh-CN", {
-      timeZone: EVENT_TIME_ZONE,
-      weekday: "short",
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-      hourCycle: "h23",
-    }).format(Date.parse(UTC_INSTANT));
-    expect(formatEventWhen(UTC_INSTANT, false)).toBe(expected);
-  });
-
-  it("formatEventWhen / formatEventDay degrade to 'Date TBD' for a TBD or undated event, never an Invalid Date", () => {
-    expect(formatEventWhen(null, false)).toBe("Date TBD");
-    expect(formatEventWhen(UTC_INSTANT, true), "date_tbd wins over a present start").toBe("Date TBD");
-    expect(formatEventWhen("not-a-date", false)).toBe("Date TBD");
-    expect(formatEventDay(UTC_INSTANT, false), "day label carries the Beijing date").toContain(
-      "20日",
-    );
-    expect(formatEventDay(null, false)).toBe("Date TBD");
-  });
-
-  it("formatCommentTime renders a fixed UTC instant in Beijing time, zh-CN (15:42Z ⇒ 23:42 北京时间), identical on any process tz; bad input ⇒ ''", () => {
-    // 2026-06-17T15:42:00Z is 23:42 in Beijing (+8). A device-tz or UTC render would show
-    // a different hour; an en-US render would show different glyphs.
-    const label = formatCommentTime("2026-06-17T15:42:00Z");
-    expect(label, "Beijing wall-clock hour:minute (23:42), not the UTC 15:42").toContain("23:42");
-    expect(label, "never the raw UTC time 15:42").not.toContain("15:42");
-    expect(label, "zh-CN month glyph").toContain("月");
-    expect(label, "Beijing date is the 17th").toContain("17日");
-    expect(label, "no English month leaks (zh-CN)").not.toMatch(/Jun/);
-    // A pre-midnight-UTC instant that rolls to the NEXT Beijing day: 20:00Z on 06-17 is
-    // 04:00 on 06-18 Beijing — the date must advance, proving the zone is really applied.
-    expect(formatCommentTime("2026-06-17T20:00:00Z"), "rolls to the next Beijing day").toContain(
-      "18日",
-    );
-    for (const bad of ["", "not-a-date", "2026-13-99", "🛑"]) {
-      expect(formatCommentTime(bad), `bad value ${JSON.stringify(bad)} ⇒ ""`).toBe("");
-    }
-  });
-});
-
-// ─────────────────────────────────────────────────────────────────────────────
-// formatOptionWhen (M1): include the END DATE only when the end is on another
-// Beijing day — so multi-day date-poll candidates read unambiguously.
-// ─────────────────────────────────────────────────────────────────────────────
-
-describe("Batch 3 [TIMEZONE]: formatOptionWhen includes the end DATE iff the end is a different Beijing day (M1)", () => {
-  it("a same-Beijing-day option shows a bare end TIME (no second date): 19:30 – 22:00", () => {
-    // 11:30Z → 14:00Z, both 2026-06-20 in Beijing (19:30 → 22:00).
-    const label = formatOptionWhen("2026-06-20T11:30:00Z", "2026-06-20T14:00:00Z");
-    expect(label, "start is the Beijing wall-clock").toContain("19:30");
-    expect(label, "end is a bare Beijing time").toContain("22:00");
-    expect(label, "the two times are joined with a dash").toContain("–");
-    // The END must NOT carry a date glyph (no '月' AFTER the dash) on a same-day option.
-    const afterDash = label.slice(label.indexOf("–"));
-    expect(afterDash, "same-day end is time-only — no second 月/日 date").not.toMatch(/月|日/);
-  });
-
-  it("a cross-Beijing-day option INCLUDES the end's date so it reads unambiguously: '… 22:00 – 6月21日…02:00'", () => {
-    // 14:00Z (06-20) → 18:00Z (06-20) is 22:00 06-20 → 02:00 06-21 in Beijing — different day.
-    const label = formatOptionWhen("2026-06-20T14:00:00Z", "2026-06-20T18:00:00Z");
-    expect(label, "start 22:00 Beijing on the 20th").toContain("22:00");
-    expect(label, "end 02:00 Beijing").toContain("02:00");
-    // The end DATE (the 21st) is now spelled out — the M1 disambiguation.
-    expect(label, "the end's Beijing date (21日) is included").toContain("21日");
-    const afterDash = label.slice(label.indexOf("–"));
-    expect(afterDash, "the post-dash end carries a 月 date glyph (next day)").toContain("月");
-  });
-
-  it("formatOptionWhen with no end shows just the start; a bad start ⇒ 'Date TBD' (never Invalid Date)", () => {
-    const noEnd = formatOptionWhen("2026-06-20T11:30:00Z", null);
-    expect(noEnd, "start only").toContain("19:30");
-    expect(noEnd, "no dash when there's no end").not.toContain("–");
-    expect(formatOptionWhen("not-a-date", null)).toBe("Date TBD");
-    // A bad END is tolerated: fall back to the start-only label, not a crash.
-    expect(formatOptionWhen("2026-06-20T11:30:00Z", "garbage"), "bad end ⇒ start-only").toContain(
-      "19:30",
-    );
-  });
-});

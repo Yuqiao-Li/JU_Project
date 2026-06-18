@@ -3,8 +3,8 @@ import { notFound, redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 
 import { CopyLinkButton } from "@/components/events/copy-link-button";
+import { LocalWhen } from "@/components/events/local-when";
 import { goingOccupancy, remainingSpots } from "@/lib/events/capacity";
-import { formatEventWhen } from "@/lib/events/format";
 import { createClient } from "@/lib/supabase/server";
 
 import { CopyContactsButton, type GuestContact } from "./copy-contacts-button";
@@ -41,6 +41,7 @@ const STATUS_LABEL_KEYS: Record<string, string> = {
 export default async function HostEventDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const t = await getTranslations("hostEvent");
+  const common = await getTranslations("common");
 
   const supabase = await createClient();
   const {
@@ -95,7 +96,12 @@ export default async function HostEventDetailPage({ params }: { params: Promise<
         )}
       </div>
       <h1 className="mt-2 text-balance font-display text-3xl font-extrabold text-paper">{event.title}</h1>
-      <p className="mt-2 text-muted">{formatEventWhen(event.starts_at, event.date_tbd)}</p>
+      <p className="mt-2 text-muted">
+        <LocalWhen
+          iso={event.date_tbd ? null : event.starts_at}
+          tbdLabel={common("dateTbd")}
+        />
+      </p>
 
       <div className="mt-6 flex flex-wrap gap-3">
         <Link

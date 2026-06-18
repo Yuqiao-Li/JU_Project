@@ -3,7 +3,7 @@ import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 
 import { Wordmark } from "@/components/brand/wordmark";
-import { formatEventWhen } from "@/lib/events/format";
+import { LocalWhen } from "@/components/events/local-when";
 import {
   groupPublicEventsByTime,
   type PublicEvent,
@@ -52,6 +52,8 @@ export default async function OrganizerProfilePage({
   // exactly — so normalize the URL segment to resolve `/u/Rain` and `/u/rain` alike.
   const handle = normalizeUsername(decodeURIComponent(username));
   const t = await getTranslations("organizer");
+  const common = await getTranslations("common");
+  const dateTbdLabel = common("dateTbd");
 
   const events = await readPublicEventsByHost(handle);
   const { upcoming, past } = groupPublicEventsByTime(events, new Date());
@@ -93,9 +95,9 @@ export default async function OrganizerProfilePage({
           </div>
         ) : (
           <div className="mt-10 space-y-12">
-            <EventSection title={t("upcoming")} events={upcoming} />
+            <EventSection title={t("upcoming")} events={upcoming} dateTbdLabel={dateTbdLabel} />
             {past.length > 0 && (
-              <EventSection title={t("past")} events={past} muted />
+              <EventSection title={t("past")} events={past} muted dateTbdLabel={dateTbdLabel} />
             )}
           </div>
         )}
@@ -117,10 +119,12 @@ function EventSection({
   title,
   events,
   muted = false,
+  dateTbdLabel,
 }: {
   title: string;
   events: PublicEvent[];
   muted?: boolean;
+  dateTbdLabel: string;
 }) {
   if (events.length === 0) return null;
   return (
@@ -129,7 +133,7 @@ function EventSection({
       <ul className="mt-4 grid gap-4 sm:grid-cols-2">
         {events.map((event) => (
           <li key={event.id}>
-            <EventCard event={event} muted={muted} />
+            <EventCard event={event} muted={muted} dateTbdLabel={dateTbdLabel} />
           </li>
         ))}
       </ul>
@@ -137,8 +141,16 @@ function EventSection({
   );
 }
 
-function EventCard({ event, muted }: { event: PublicEvent; muted: boolean }) {
-  const when = formatEventWhen(event.starts_at, event.date_tbd);
+function EventCard({
+  event,
+  muted,
+  dateTbdLabel,
+}: {
+  event: PublicEvent;
+  muted: boolean;
+  dateTbdLabel: string;
+}) {
+  const whenIso = event.date_tbd ? null : event.starts_at;
   return (
     <Link
       href={`/${event.slug}`}
@@ -161,7 +173,7 @@ function EventCard({ event, muted }: { event: PublicEvent; muted: boolean }) {
       <div className="p-5">
         <h3 className="font-display text-lg font-bold text-paper">{event.title}</h3>
         <p className="mt-1 text-sm text-muted">
-          {when}
+          <LocalWhen iso={whenIso} tbdLabel={dateTbdLabel} />
           {event.location_city ? ` · ${event.location_city}` : ""}
         </p>
       </div>

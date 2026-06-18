@@ -10,7 +10,6 @@ import { localStackRunning, resolveLocalSupabase } from "./setup/local-supabase"
 import {
   COMMENT_MAX_LENGTH,
   commentInputSchema,
-  formatCommentTime,
   parseComment,
   parseComments,
   type CommentEntry,
@@ -230,13 +229,6 @@ describe("task 4.1 [SECURITY] A: the comment boundary desensitizes, fails closed
       true,
     );
     expect(commentInputSchema.safeParse({ body: "hi" }).success, "absent token ok").toBe(true);
-  });
-
-  it("formatCommentTime renders a non-empty label for a valid ISO and an EMPTY string for a bad value (never throws / never 'Invalid Date')", () => {
-    expect(formatCommentTime("2026-06-17T15:42:00Z").length, "valid ISO ⇒ a label").toBeGreaterThan(0);
-    for (const bad of ["", "not-a-date", "2026-13-99", "🛑"]) {
-      expect(formatCommentTime(bad), `bad value ${JSON.stringify(bad)} ⇒ ""`).toBe("");
-    }
   });
 });
 

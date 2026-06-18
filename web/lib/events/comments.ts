@@ -1,7 +1,5 @@
 import { z } from "zod";
 
-import { EVENT_TIME_ZONE } from "./timezone";
-
 /**
  * The Activity-Feed comment list (task 4.1) — the boundary + shaping for the
  * `get_comments` / `add_comment` RPC payloads.
@@ -86,19 +84,3 @@ export const commentInputSchema = z.object({
 });
 
 export type CommentInput = z.infer<typeof commentInputSchema>;
-
-const TIME_FMT = new Intl.DateTimeFormat("zh-CN", {
-  timeZone: EVENT_TIME_ZONE,
-  month: "short",
-  day: "numeric",
-  hour: "2-digit",
-  minute: "2-digit",
-  hourCycle: "h23",
-});
-
-/** Display-only timestamp for a comment ("6月17日 15:42"); empty on a bad value. */
-export function formatCommentTime(iso: string): string {
-  const ms = Date.parse(iso);
-  if (Number.isNaN(ms)) return "";
-  return TIME_FMT.format(new Date(ms));
-}

@@ -5,10 +5,11 @@ import { useCallback, useEffect, useState } from "react";
 
 import {
   commentInputSchema,
-  formatCommentTime,
   parseComments,
   type CommentEntry,
 } from "@/lib/events/comments";
+
+import { LocalCommentTime } from "./local-when";
 
 /**
  * Activity Feed (task 4.1) — the public event page's comment stream.
@@ -173,9 +174,9 @@ export function CommentsFeed({
                   </span>
                 )}
                 {!hideTimestamps && (
-                  <time dateTime={c.created_at} className="text-xs text-muted">
-                    {formatCommentTime(c.created_at)}
-                  </time>
+                  <span className="text-xs text-muted">
+                    <LocalCommentTime iso={c.created_at} />
+                  </span>
                 )}
               </div>
               <p className="mt-1 whitespace-pre-wrap break-words leading-relaxed text-paper/90">

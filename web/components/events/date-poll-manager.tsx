@@ -9,7 +9,8 @@ import {
   removeDateOption,
   type DatePollState,
 } from "@/app/dashboard/events/[id]/date-actions";
-import { formatOptionWhen } from "@/lib/events/format";
+
+import { LocalWhenRange } from "./local-when";
 
 /**
  * Host date-poll manager (task 5.1) — add/remove candidate dates and lock one in.
@@ -132,7 +133,9 @@ function DateOptionRow({
     <li className="rounded-xl border border-line bg-surface/40 px-4 py-3">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="min-w-0">
-          <p className="truncate text-paper">{formatOptionWhen(option.starts_at, option.ends_at)}</p>
+          <p className="truncate text-paper">
+            <LocalWhenRange startsAt={option.starts_at} endsAt={option.ends_at} />
+          </p>
           <p className="text-sm text-muted">
             {t("voteCount", { count: option.votes })}
           </p>
