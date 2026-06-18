@@ -13,31 +13,35 @@
  *   bundles, and it is only ever read by the server-only `service.ts`.
  */
 
-function requireEnv(name: string): string {
-  const value = process.env[name];
-  if (!value) {
-    throw new Error(
-      `Missing required environment variable: ${name}. ` +
-        `See web/env.local.example and set it in web/.env.local.`,
-    );
-  }
-  return value;
+function missing(name: string): never {
+  throw new Error(
+    `Missing required environment variable: ${name}. ` +
+      `See web/env.local.example and set it in web/.env.local.`,
+  );
 }
 
-/** Public Supabase project URL (safe for the browser). */
+/**
+ * Public Supabase project URL (safe for the browser).
+ *
+ * IMPORTANT: this MUST be a LITERAL `process.env.NEXT_PUBLIC_…` reference. Next
+ * only inlines NEXT_PUBLIC_ vars into the client bundle when accessed statically;
+ * a dynamic `process.env[name]` read is NOT inlined, so it is `undefined` in the
+ * browser even when the var is set — which breaks the browser Supabase client.
+ */
 export function supabaseUrl(): string {
-  return requireEnv("NEXT_PUBLIC_SUPABASE_URL");
+  return process.env.NEXT_PUBLIC_SUPABASE_URL || missing("NEXT_PUBLIC_SUPABASE_URL");
 }
 
-/** Public anon key — the only Supabase key that may reach the client. */
+/** Public anon key — the only Supabase key that may reach the client. Literal access (see above). */
 export function supabaseAnonKey(): string {
-  return requireEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY");
+  return process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || missing("NEXT_PUBLIC_SUPABASE_ANON_KEY");
 }
 
 /**
  * Service-role key — TRUSTED. Must only be read on the server (`service.ts`
- * imports `server-only`). Intentionally NOT a `NEXT_PUBLIC_` variable.
+ * imports `server-only`). Intentionally NOT a `NEXT_PUBLIC_` variable, so it is
+ * never inlined into a client bundle; read at runtime on the server.
  */
 export function supabaseServiceRoleKey(): string {
-  return requireEnv("SUPABASE_SERVICE_ROLE_KEY");
+  return process.env.SUPABASE_SERVICE_ROLE_KEY || missing("SUPABASE_SERVICE_ROLE_KEY");
 }
