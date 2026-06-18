@@ -75,6 +75,52 @@ body {
   to { opacity: 1; transform: translateY(0); }
 }
 
+/* ── Event effects (§7.2): the host-selected celebration overlay, drawn by
+ * <EventEffect> over the hero poster. Lightweight + tasteful — the app spends
+ * its boldness on the poster, so these stay quiet. All three reuse the global
+ * reduced-motion block below: with motion off the glow holds still and the
+ * confetti/balloons keep their off-screen rest position (a graceful, static
+ * degrade, same as `.aurora`). */
+.effect-glow {
+  filter: blur(40px);
+  animation: effect-glow 7s ease-in-out infinite;
+}
+
+@keyframes effect-glow {
+  0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.55; }
+  50% { transform: translate(-50%, -50%) scale(1.12); opacity: 0.85; }
+}
+
+/* Confetti pieces drift down + sway from above the hero to below it. */
+.effect-confetti {
+  animation-name: effect-confetti;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+  will-change: transform, opacity;
+}
+
+@keyframes effect-confetti {
+  0% { transform: translateY(0) rotate(0deg); opacity: 0; }
+  10% { opacity: 0.9; }
+  90% { opacity: 0.9; }
+  100% { transform: translateY(440px) rotate(220deg); opacity: 0; }
+}
+
+/* Balloons rise from below the hero up past the top. */
+.effect-balloon {
+  animation-name: effect-balloon;
+  animation-timing-function: ease-in;
+  animation-iteration-count: infinite;
+  will-change: transform, opacity;
+}
+
+@keyframes effect-balloon {
+  0% { transform: translateY(0) translateX(0); opacity: 0; }
+  12% { opacity: 0.85; }
+  88% { opacity: 0.85; }
+  100% { transform: translateY(-420px) translateX(10px); opacity: 0; }
+}
+
 /* Accessible focus ring used app-wide. */
 :focus-visible {
   outline: 2px solid var(--color-iris);

@@ -1,6 +1,7 @@
 import { useTranslations } from "next-intl";
 
 import { AddToCalendar } from "@/components/events/add-to-calendar";
+import { EventEffect } from "@/components/events/event-effect";
 import { spotsLeftLabel } from "@/lib/events/capacity";
 import { formatEventWhen } from "@/lib/events/format";
 import { themeColorFromJson, themeSwatch } from "@/lib/events/theme";
@@ -218,10 +219,20 @@ function Hero({
   return (
     <div
       className="relative flex min-h-[15rem] flex-col justify-end overflow-hidden rounded-3xl border border-line bg-surface bg-cover bg-center p-6 sm:min-h-[18rem] sm:p-8"
-      style={surface}
+      style={{
+        ...surface,
+        // FIX 2 (§7.2): keep the host's theme color reading even WITH a cover
+        // image — a cover otherwise swaps out the accent gradient and the theme
+        // all but disappears. An always-present accent ring + soft accent glow
+        // survives a cover and stays understated under the scrim in both cases.
+        boxShadow: `inset 0 0 0 1px ${accent}66, 0 10px 40px -16px ${accent}80`,
+      }}
     >
       {/* Scrim for legible text over any cover. */}
       <div aria-hidden className="absolute inset-0 bg-gradient-to-t from-ink via-ink/55 to-transparent" />
+      {/* FIX 1 (§7.2): the host-selected celebration effect, layered ABOVE the
+          cover/scrim but BELOW the text so the title stays legible. */}
+      <EventEffect effect={event.effect} accent={accent} />
       <div className="relative">
         <div className="flex flex-wrap items-center gap-2 text-sm text-muted">
           {event.host_display_name && (
