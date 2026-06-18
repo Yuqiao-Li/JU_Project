@@ -4,7 +4,8 @@
  * The DB stores every "when" as a UTC instant. Audience is North-American Chinese,
  * so each viewer must see that instant in THEIR OWN browser-local time zone and in
  * THEIR selected next-intl locale, with a short zone label so the wall-clock is never
- * ambiguous. There is therefore ONE shared option set per kind of display (this also
+ * ambiguous (a friendly NAMED zone — "ET"/"纽约时间" — never a bare `GMT±N`; see
+ * the option sets below). There is therefore ONE shared option set per kind of display (this also
  * collapses §7.3's zh-CN "yyyy/mm/日" vs en-CA "yyyy/mm/dd" divergence — the locale,
  * not a baked format, is the only knob).
  *
@@ -18,9 +19,19 @@
  * (`buildLocalTimeScript`) before paint on a hard nav. See components/events/local-when.
  */
 
+/*
+ * Zone label = `timeZoneName: "shortGeneric"` (NOT "short"). "short" yields a
+ * DST-flavored abbrev for US zones in en (EDT/PDT) but a BARE offset in zh
+ * ("GMT-4 15:30") — ambiguous and ugly. "shortGeneric" gives a concise, friendly,
+ * locale-aware NAMED zone with no bare `GMT±N` for any US zone, in both locales:
+ *   en: "ET" / "PT" / "CT" / "MT"      zh: "纽约时间" / "洛杉矶时间" / "芝加哥时间" / "丹佛时间"
+ * (UTC itself still reads "GMT" — its proper name, not a bare offset.) This is a
+ * pure-Intl choice — no post-format mapping table needed.
+ */
+
 /**
- * The event "when" line: weekday + date + time + zone, e.g. "Sat, Jun 20, 19:30 GMT+8"
- * / "6月20日周六 19:30 GMT+8". NO `timeZone` key — the renderer supplies UTC (SSR
+ * The event "when" line: weekday + date + time + zone, e.g. "Sat, Jun 20, 19:30 ET"
+ * / "6月20日周六 15:30 纽约时间". NO `timeZone` key — the renderer supplies UTC (SSR
  * fallback) or omits it (runtime-local).
  */
 export const WHEN_OPTIONS: Intl.DateTimeFormatOptions = {
@@ -31,25 +42,25 @@ export const WHEN_OPTIONS: Intl.DateTimeFormatOptions = {
   hour: "2-digit",
   minute: "2-digit",
   hourCycle: "h23",
-  timeZoneName: "short",
+  timeZoneName: "shortGeneric",
 };
 
-/** The same-local-day range tail: time + zone only, e.g. "22:00 GMT+8". */
+/** The same-local-day range tail: time + zone only, e.g. "22:00 ET". */
 export const END_TIME_OPTIONS: Intl.DateTimeFormatOptions = {
   hour: "2-digit",
   minute: "2-digit",
   hourCycle: "h23",
-  timeZoneName: "short",
+  timeZoneName: "shortGeneric",
 };
 
-/** A comment timestamp: month + day + time + zone, e.g. "Jun 17, 15:42 GMT+8". */
+/** A comment timestamp: month + day + time + zone, e.g. "Jun 17, 15:42 ET". */
 export const COMMENT_OPTIONS: Intl.DateTimeFormatOptions = {
   month: "short",
   day: "numeric",
   hour: "2-digit",
   minute: "2-digit",
   hourCycle: "h23",
-  timeZoneName: "short",
+  timeZoneName: "shortGeneric",
 };
 
 /** Parse an ISO string to epoch ms, or null when empty/unparseable. */

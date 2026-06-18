@@ -47,17 +47,18 @@ const Z = "2026-06-20T11:30:00.000Z";
 // ─────────────────────────────────────────────────────────────────────────────
 // Item 1 — the shared option sets (one per display kind; the per-call fn sets timeZone)
 // ─────────────────────────────────────────────────────────────────────────────
-describe("[WHEN-FORMAT] option sets: short zone + 24h clock, NO baked timeZone (the renderer supplies UTC or omits it)", () => {
+describe("[WHEN-FORMAT] option sets: shortGeneric zone + 24h clock, NO baked timeZone (the renderer supplies UTC or omits it)", () => {
   const ALL = [
     ["WHEN_OPTIONS", WHEN_OPTIONS],
     ["END_TIME_OPTIONS", END_TIME_OPTIONS],
     ["COMMENT_OPTIONS", COMMENT_OPTIONS],
   ] as const;
 
-  it("every option set is short-zone, 24-hour, and carries NO timeZone key (per-call fns pin it)", () => {
+  it("every option set is shortGeneric-zone, 24-hour, and carries NO timeZone key (per-call fns pin it)", () => {
     for (const [name, opts] of ALL) {
-      expect(opts.timeZoneName, `${name}: short zone label so the wall-clock is never ambiguous`).toBe(
-        "short",
+      // #5: a friendly NAMED zone ("ET" / "纽约时间"), never a bare GMT±N for US viewers.
+      expect(opts.timeZoneName, `${name}: shortGeneric zone label so US zones read as a friendly NAME, not a bare GMT offset`).toBe(
+        "shortGeneric",
       );
       expect(opts.hourCycle, `${name}: 24h clock (h23)`).toBe("h23");
       expect(
@@ -99,7 +100,9 @@ describe("[WHEN-FORMAT] formatInUtc: pins UTC (process-tz invariant) and honours
   it("the en render carries the UTC wall-clock 11:30 + a zone token, and NEVER the +08:00 (19:30) or local (07:30) hour", () => {
     const out = formatInUtc(Z, "en", WHEN_OPTIONS);
     expect(out, "contains the UTC wall-clock 11:30").toContain("11:30");
-    expect(out, "carries a UTC/GMT zone token (timeZoneName: short)").toMatch(/UTC|GMT/);
+    // UTC's friendly name under shortGeneric is "GMT" (its proper name, not a bare offset) —
+    // fine here: formatInUtc is the SSR fallback only; the browser rewrites to the local zone.
+    expect(out, "carries UTC's friendly zone name 'GMT' (shortGeneric)").toMatch(/UTC|GMT/);
     expect(out, "NOT the removed +08:00 Beijing hour — no baked offset").not.toContain("19:30");
     expect(out, "NOT the runtime-local NY hour — it pins UTC, not local").not.toContain("07:30");
   });
@@ -137,12 +140,31 @@ describe("[WHEN-FORMAT] formatInUtc: pins UTC (process-tz invariant) and honours
 // Item 3 — formatLocal: the RUNTIME-LOCAL render (TZ pinned to America/New_York above)
 // ─────────────────────────────────────────────────────────────────────────────
 describe("[WHEN-FORMAT] formatLocal: renders in the RUNTIME-LOCAL zone (TZ=America/New_York), not UTC, not Beijing", () => {
-  it("carries the NY wall-clock 07:30 + a NY/GMT-4 zone token, and NEVER the UTC hour 11:30", () => {
+  it("carries the NY wall-clock 07:30 + the FRIENDLY NAMED zone token 'ET' (shortGeneric), and NEVER the UTC hour 11:30", () => {
     const out = formatLocal(Z, "en", WHEN_OPTIONS);
     expect(out, "contains the NY (EDT) wall-clock 07:30").toContain("07:30");
-    expect(out, "carries a local zone token (EDT / GMT-4 / EST / GMT-5)").toMatch(/EDT|GMT-4|EST|GMT-5/);
+    // #5: shortGeneric ⇒ a friendly NAMED zone ("ET"), not the old DST abbrev (EDT/EST) or bare GMT-4.
+    expect(out, "carries the friendly named US zone token 'ET' (shortGeneric)").toContain("ET");
     expect(out, "NOT the UTC hour 11:30 — this is the runtime-local render").not.toContain("11:30");
     expect(out, "NOT the removed Beijing hour 19:30").not.toContain("19:30");
+  });
+
+  // #5 INTENT — the whole point: a US viewer must see a FRIENDLY NAMED zone, NEVER a bare
+  // GMT±N offset. shortGeneric gives "ET" (en) / "纽约时间" (zh); a regression back to "short"
+  // (or any post-format mishap) would re-introduce "GMT-4"/"GMT-5" — which this pins OUT.
+  it("for a US zone, neither en nor zh renders a BARE GMT± offset — both carry the friendly NAMED zone (#5)", () => {
+    const en = formatLocal(Z, "en", WHEN_OPTIONS);
+    const zh = formatLocal(Z, "zh", WHEN_OPTIONS);
+    // No bare GMT offset of the form GMT+ / GMT- for either locale (the regression we ban).
+    expect(/GMT[+-]/.test(en), `en US render must NOT contain a bare GMT± offset, got: ${en}`).toBe(false);
+    expect(/GMT[+-]/.test(zh), `zh US render must NOT contain a bare GMT± offset, got: ${zh}`).toBe(false);
+    // And it SHOULD contain the friendly named token: "ET" for en, "纽约"/"时间" for zh.
+    expect(en, "en carries the friendly named zone 'ET'").toContain("ET");
+    expect(zh, "zh carries the friendly named zone 纽约").toContain("纽约");
+    expect(zh, "zh carries the friendly named zone glyph 时间").toContain("时间");
+    // Belt-and-suspenders: the old DST abbrevs are gone too (shortGeneric is generic, not DST-flavored).
+    expect(en, "no DST-flavored EDT under shortGeneric").not.toContain("EDT");
+    expect(en, "no DST-flavored EST under shortGeneric").not.toContain("EST");
   });
 
   it("equals a fresh no-timeZone Intl formatter — confirms it omits timeZone and uses the runtime zone", () => {

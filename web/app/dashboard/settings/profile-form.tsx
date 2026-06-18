@@ -129,7 +129,7 @@ export function ProfileForm({
             spellCheck={false}
             maxLength={30}
             placeholder={t("usernamePlaceholder")}
-            className="h-12 flex-1 bg-transparent pl-1 pr-4 text-paper placeholder:text-muted/60 focus:outline-none"
+            className="h-12 flex-1 bg-transparent pl-1 pr-4 text-paper placeholder:text-muted/60 focus:outline-none focus-visible:outline-none"
           />
         </div>
         <p className={`text-xs ${hintColor}`}>{hint.text}</p>
