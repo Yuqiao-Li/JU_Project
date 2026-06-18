@@ -324,10 +324,32 @@ describe("task 4.1 [SECURITY] B: the feed updates by visibility-aware POLLING (r
       /t\(\s*["']hostOnly["']\s*\)/.test(COMMENTS_FEED),
       "rsvp_enabled=false ⇒ host-only notice via t('hostOnly') (guest 隐藏输入框)",
     ).toBe(true);
-    const FEED_MESSAGES = JSON.parse(src("messages/en.json")).feed;
+    // SECURITY (strengthened, independent): the host-only branch must be a NOTICE, not a
+    // composer. Structurally pin that the ONLY textarea lives inside the canCompose branch
+    // and that t("hostOnly") is NOT wired as a textarea placeholder (which would mean a
+    // composer was shown to a guest on an rsvp_enabled=false event). A single <textarea>
+    // gated by canCompose is the invariant: a non-composer fallback can't be an input.
+    const textareaCount = (COMMENTS_FEED.match(/<textarea\b/g) ?? []).length;
+    expect(textareaCount, "exactly one composer textarea exists (the gated one)").toBe(1);
     expect(
-      /only the host can post/i.test(FEED_MESSAGES?.hostOnly ?? ""),
+      /canCompose\s*\?[\s\S]*<textarea\b/.test(COMMENTS_FEED),
+      "the composer textarea is rendered ONLY inside the canCompose-true branch",
+    ).toBe(true);
+    expect(
+      /placeholder=\{?\s*t\(\s*["']hostOnly["']\s*\)/.test(COMMENTS_FEED),
+      "t('hostOnly') is a NOTICE, never a textarea placeholder (not a disguised composer)",
+    ).toBe(false);
+    // The notice text in BOTH shipped catalogs conveys host-only (a missing/weak zh key
+    // would still ship a host-only-looking bypass to Chinese users).
+    const EN_FEED = JSON.parse(src("messages/en.json")).feed;
+    const ZH_FEED = JSON.parse(src("messages/zh.json")).feed;
+    expect(
+      /only the host can post/i.test(EN_FEED?.hostOnly ?? ""),
       "messages/en.json feed.hostOnly conveys the host-only restriction",
+    ).toBe(true);
+    expect(
+      typeof ZH_FEED?.hostOnly === "string" && /主办|主持|host/i.test(ZH_FEED.hostOnly) && /只有|仅/.test(ZH_FEED.hostOnly),
+      "messages/zh.json feed.hostOnly conveys host-only (只有主办方…)",
     ).toBe(true);
   });
 
