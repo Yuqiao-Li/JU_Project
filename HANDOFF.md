@@ -251,3 +251,24 @@ curl -s -w '\nHTTP %{http_code}\n' 'https://<PROJECT>.supabase.co/rest/v1/rpc/ge
 5. 满意后 `prelaunch-fixes` → `master`（PR 或本地 merge），Vercel production 自动部署；确认 `supabase db push` 把云端 schema 推到 0019（之后是 Round-2 的 0020）。
 6. 公开上线前：**轮换 service_role / JWT secret**（§2，且轮换后把新 legacy key 回填 Vercel）；Auth URL 加正式域名。
 7. 上线后按 §8 优先级做迭代项（仍用独立测试 agent 模式）。
+
+---
+
+## 10. Round-3 待办（2026-06-18 新增；用户在生产验收后提出，决策已定）
+
+> Round-2 已全部完成并合并 master（HEAD `37ae246`，迁移仍 0019，下一个 **0020**）。以下 6 项在本轮逐项修（实现 agent + 独立测试 agent + 全量门禁）。**关键插曲**：用户在 IDE 内置浏览器看生产 dashboard 卡在骨架屏 —— 那是 IDE 的 iframe sandbox 禁脚本（Next 流式 Suspense 的换页脚本被拦），**非应用 bug**，真浏览器正常；我们代码无任何 CSP/sandbox 头。
+
+**已定决策**：
+- **时区**：保留 §7.4「观看者本地时间」，但标签改**友好命名时区（不要裸 GMT）**——美国区显示 美东/美西/美中/美山（或 ET/PT 类），非美国友好回退。（用户原话「用户在哪里就显示哪里的时间」+「不要 GMT」；他先前看到的 GMT 部分是 IDE-sandbox 回退态 UTC。）
+- **发现页**：做**全站公开发现页**——任何人（未登录）可浏览所有**已发布的 public 活动**；页面带「新建活动」按钮,但点进创建流程才**强制登录**。（注意隐私含义：public 活动从前只「凭链接可见」,现在变成全站可发现——可能日后需要 unlisted 第三档可见性，先记着。）
+
+| # | 项 | 根因 / 现状（file:line） | 修复方向 |
+|---|---|---|---|
+| 1 | **magic-link 登录跳转** | 点登录→邮件链接在**新标签**打开→`app/auth/callback/route.ts` 换 code 后 redirect 到 dashboard；**原标签**（`app/login` 的「查收邮件」态）不动。 | 原标签监听 auth（`onAuthStateChange`/storage 事件,同浏览器跨标签可感知）→ 出现 session 即跳 dashboard；callback 页改成「已登录,可关掉/返回原页」确认页（而非直接进 dashboard）。跨设备无共享存储则退化为原行为。 |
+| 2 | **验证码（OTP）第二方式** | 现只有 magic-link（`signInWithOtp`，`app/login`）。 | 加邮箱 OTP：UI 输 6 位码 → `supabase.auth.verifyOtp({type:'email',email,token})`；magic-link 邮件模板里带 `{{ .Token }}`。作为保险路径。 |
+| 3 | **magic-link 邮件太丑** | Supabase Auth 默认模板（「Your sign-in link」纯文本）。 | 自定义 HTML 模板：`supabase/config.toml` 的 `[auth.email.template.magic_link]` + 模板文件（本地生效）；**云端要手动**粘进 Supabase 后台 Auth→Email Templates。品牌化（JU、暗色、coral）。 |
+| 4 | **用户名输入框 bug** | `app/dashboard/settings/profile-form.tsx:115-133`：容器 `focus-within:border-iris` + input 又吃到全局 `:focus-visible` outline（globals.css:79，不同圆角/offset）→ **双重错位焦点环**。 | input 加 `focus-visible:outline-none`（或统一聚焦指示到容器），消除双环；核对 `/u/` 前缀对齐。 |
+| 5 | **时区友好命名** | `lib/events/when-format.ts:34/42/52` 三处 `timeZoneName:"short"` → 美国出 EDT/PST、其它出 GMT+N。 | 改成友好命名（`shortGeneric`/`longGeneric` 或小 US→美东/美西/美中/美山 映射）；保留观看者本地 + 水合机制不变。 |
+| 6 | **公开发现页（大）** | 无全站发现入口；`app/page.tsx` 登录用户 redirect→dashboard、未登录只给 CTA。`/u/[username]` 已公开但只单主办。 | 新 `get_public_events` SECURITY DEFINER RPC（**迁移 0020**，只返 public+published 的一级字段:标题/主办/时间/城市/封面，**绝不含地址/名单**）+ 发现页 UI（任何人可看）+「新建活动」按钮 login-gated。 |
+
+**完成后**：写正式 Round-3 交接文档（本节即雏形），用户新开对话继续。
