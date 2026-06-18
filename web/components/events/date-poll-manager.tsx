@@ -10,6 +10,7 @@ import {
   type DatePollState,
 } from "@/app/dashboard/events/[id]/date-actions";
 
+import { DateTimeField } from "./date-time-field";
 import { LocalWhenRange } from "./local-when";
 
 /**
@@ -76,24 +77,16 @@ export function DatePollManager({
             <label htmlFor="poll-starts" className="text-xs text-muted">
               {t("starts")}
             </label>
-            <input
-              id="poll-starts"
-              name="starts_at"
-              type="datetime-local"
-              required
-              className="h-11 w-full rounded-xl border border-line bg-surface-2 px-3 text-paper focus:border-iris focus:outline-none"
-            />
+            {/* Same locked "yyyy/mm/dd HH:mm" field as the event start time: it
+                submits a browser-local → UTC ISO instant; the add action validates
+                the ISO (a missing start is caught server-side). */}
+            <DateTimeField id="poll-starts" name="starts_at" />
           </div>
           <div className="flex flex-col gap-1.5">
             <label htmlFor="poll-ends" className="text-xs text-muted">
               {t("ends")} <span className="text-muted/60">{t("optional")}</span>
             </label>
-            <input
-              id="poll-ends"
-              name="ends_at"
-              type="datetime-local"
-              className="h-11 w-full rounded-xl border border-line bg-surface-2 px-3 text-paper focus:border-iris focus:outline-none"
-            />
+            <DateTimeField id="poll-ends" name="ends_at" />
           </div>
         </div>
         {addState.status === "error" && (

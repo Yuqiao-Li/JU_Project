@@ -16,6 +16,7 @@ import {
   splitNaive,
   type DateTimeParts,
 } from "@/lib/events/datetime-field";
+import { isoToLocalInput, localInputToISO } from "@/lib/events/timezone";
 
 /**
  * Custom date+time field — drop-in replacement for `<input type="datetime-local">`.
@@ -25,22 +26,27 @@ import {
  * is LOCKED to `yyyy/mm/dd HH:mm` (24h) for everyone; only the calendar chrome
  * (month caption, weekday headers, day labels) localises via Intl.
  *
- * The seam: we submit a hidden `<input name={name}>` whose value is EXACTLY the
- * naive `"YYYY-MM-DDTHH:mm"` string (or "") that datetime-local sent — so
- * `schema.ts` / `timezone.ts` / the FormData contract are unchanged. Every value
- * transform goes through the pure string/int helpers in `lib/events/datetime-field`;
- * the value never passes through a `Date` (that would re-apply the device tz).
+ * The seam: we submit a hidden `<input name={name}>` whose value is a UTC ISO
+ * instant (or ""), so `schema.ts` just validates an ISO — the browser-local →
+ * UTC conversion happens HERE (the host's tz is only known client-side). The
+ * naive `"YYYY-MM-DDTHH:mm"` display/edit math still flows through the pure
+ * string/int helpers in `lib/events/datetime-field` (never a `Date`); only the
+ * naive↔ISO boundary uses `localInputToISO` / `isoToLocalInput`.
  *
- * Hydration-safe: state is seeded lazily from `defaultValue` (string only). The
- * calendar's fallback month (when there's no value), the Today button, and the
- * today-marker are derived only after mount (the `today` state is null until
- * then), so SSR and the first client render agree.
+ * Hydration-safe: the hidden ISO is seeded from `defaultIso` and is tz-INDEPENDENT,
+ * so SSR and the client's first render agree (no mismatch on the submitted value).
+ * The naive DISPLAY is tz-dependent, so it starts EMPTY and is seeded only after
+ * mount via `isoToLocalInput(defaultIso)` (a brief empty→filled on an edit form is
+ * the cost of avoiding a server-tz hydration mismatch; new events have no defaultIso,
+ * so no flash). The fallback month, Today button, and today-marker likewise wait for
+ * mount (the `today` state is null until then). No `new Date()` in the render path.
  */
 
 type Props = {
   name: string;
   id?: string;
-  defaultValue?: string;
+  /** The stored UTC instant to edit (null/undefined for a new event). */
+  defaultIso?: string | null;
   disabled?: boolean;
   className?: string;
 };
@@ -56,15 +62,22 @@ function normalize(value: string | undefined): string {
   return joinNaive(clampParts(parts));
 }
 
-export function DateTimeField({ name, id, defaultValue, disabled = false, className = "" }: Props) {
+export function DateTimeField({ name, id, defaultIso, disabled = false, className = "" }: Props) {
   const t = useTranslations("eventForm");
   const locale = useLocale();
 
-  // Single source of truth: the naive value that gets submitted.
-  const [value, setValue] = useState<string>(() => normalize(defaultValue));
+  // The naive wall-clock value driving the display. Starts EMPTY (the naive form
+  // of `defaultIso` is tz-dependent, so it's seeded post-mount) and is the single
+  // source of truth for the visible field once the host interacts.
+  const [value, setValue] = useState<string>("");
+  // What gets SUBMITTED: a UTC ISO instant. Seeded from `defaultIso` (tz-INDEPENDENT,
+  // so SSR === first client render → no hydration mismatch on the hidden input). On
+  // every user edit we recompute it from the (browser-local) naive value below, so an
+  // untouched edit form re-submits the original instant unchanged.
+  const [iso, setIso] = useState<string>(defaultIso ?? "");
   // What's shown in the masked text input. Kept loosely coupled so a partial
   // value (mid-typing) can display without forcing a (still-empty) `value`.
-  const [text, setText] = useState<string>(() => naiveToDisplay(normalize(defaultValue)));
+  const [text, setText] = useState<string>("");
 
   const [open, setOpen] = useState(false);
   // "Today" is device-clock-derived, so it must wait until after mount to stay
@@ -72,16 +85,11 @@ export function DateTimeField({ name, id, defaultValue, disabled = false, classN
   // gate the Today button + today-marker on it. Held as STATE (not a ref) so it's
   // never read during render before it's set, and so the marker re-renders.
   const [today, setToday] = useState<{ y: number; mo: number; d: number } | null>(null);
-  // The month the calendar is currently showing.
-  const [view, setView] = useState<{ y: number; mo: number }>(() => {
-    const p = splitNaive(normalize(defaultValue));
-    return p ? { y: p.y, mo: p.mo } : FALLBACK_MONTH;
-  });
+  // The month the calendar is currently showing. Starts at the fallback month and
+  // is pointed at the seeded value / today post-mount (no tz-dependent value at SSR).
+  const [view, setView] = useState<{ y: number; mo: number }>(FALLBACK_MONTH);
   // Roving-focus day within the visible grid (drives arrow-key navigation).
-  const [focusDay, setFocusDay] = useState<number>(() => {
-    const p = splitNaive(normalize(defaultValue));
-    return p ? p.d : 1;
-  });
+  const [focusDay, setFocusDay] = useState<number>(1);
 
   const wrapperRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -89,27 +97,42 @@ export function DateTimeField({ name, id, defaultValue, disabled = false, classN
   const reactId = useId();
   const popoverId = `${id ?? name ?? reactId}-popover`;
 
-  // Read the device clock once, post-mount. This is the one legitimate place to
-  // sync client-only state in an effect (it can't run on the server without
-  // breaking hydration); the lint's set-state-in-effect rule is suppressed here.
+  // Post-mount, client-only seeding. This is the one legitimate place to sync
+  // client-only state in an effect (it can't run on the server without breaking
+  // hydration); the lint's set-state-in-effect rule is suppressed here.
+  // We (a) read the device clock for the Today affordance, and (b) seed the naive
+  // DISPLAY from `defaultIso` — `isoToLocalInput` is browser-local, so it can only
+  // run here, not at SSR. The hidden ISO is already correct from initial state.
   useEffect(() => {
     const now = new Date();
     const t = { y: now.getFullYear(), mo: now.getMonth() + 1, d: now.getDate() };
     setToday(t); // eslint-disable-line react-hooks/set-state-in-effect
-    // If the field is empty, point the calendar at the current month post-mount.
-    if (!normalize(defaultValue)) {
+    const naive = normalize(isoToLocalInput(defaultIso ?? null));
+    if (naive) {
+      // An existing instant: fill the display and point the calendar at it.
+      setValue(naive);
+      setText(naiveToDisplay(naive));
+      const p = splitNaive(naive);
+      if (p) {
+        setView({ y: p.y, mo: p.mo });
+        setFocusDay(p.d);
+      }
+    } else {
+      // Empty field: point the calendar at the current month.
       setView({ y: t.y, mo: t.mo });
       setFocusDay(t.d);
     }
-  }, [defaultValue]);
+  }, [defaultIso]);
 
   const selected = useMemo(() => splitNaive(value), [value]);
 
-  /** Commit a fully-formed parts object to both `value` and the text box. */
+  /** Commit a fully-formed parts object to the value, text box, and submitted ISO. */
   const commitParts = useCallback((parts: DateTimeParts) => {
     const naive = joinNaive(clampParts(parts));
     setValue(naive);
     setText(naiveToDisplay(naive));
+    // Browser-local → UTC for the submitted instant (this runs only in handlers).
+    setIso(localInputToISO(naive) ?? "");
   }, []);
 
   /** Set the date (keeping any existing time, else DEFAULT_TIME), e.g. on day-click. */
@@ -287,12 +310,15 @@ export function DateTimeField({ name, id, defaultValue, disabled = false, classN
   const onTextChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const masked = formatMaskedInput(e.target.value);
     setText(masked);
-    setValue(displayToNaive(masked)); // "" until the value is complete + valid
+    const naive = displayToNaive(masked); // "" until the value is complete + valid
+    setValue(naive);
+    setIso(localInputToISO(naive) ?? ""); // browser-local → UTC, "" while incomplete
   }, []);
 
   const clear = useCallback(() => {
     setValue("");
     setText("");
+    setIso("");
   }, []);
 
   const pickToday = useCallback(() => {
@@ -316,8 +342,10 @@ export function DateTimeField({ name, id, defaultValue, disabled = false, classN
 
   return (
     <div ref={wrapperRef} className="relative">
-      {/* The seam: exactly what datetime-local submitted. Never transformed via Date. */}
-      <input type="hidden" name={name} value={value} />
+      {/* The seam: a UTC ISO instant (browser-local → UTC, converted in handlers).
+          `disabled` (dateTbd) keeps it out of the FormData, matching the old native
+          input's behaviour of submitting no date when the field is off. */}
+      <input type="hidden" name={name} value={iso} disabled={disabled} />
 
       <div className={wrapperClass}>
         <input

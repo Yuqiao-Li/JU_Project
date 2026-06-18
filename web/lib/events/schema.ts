@@ -1,7 +1,6 @@
 import { z } from "zod";
 
 import { parseEffect, parseThemeColor, type ThemeKey } from "./theme";
-import { localInputToISO } from "./timezone";
 
 /**
  * Validation boundary for the create/edit event form (tasks 2.2a + 2.2b).
@@ -89,16 +88,27 @@ const coverUrlSchema = httpsOnly("That cover image link looks off.");
 const VISIBILITIES = ["public", "private"] as const;
 
 /**
- * Datetime-local "2026-06-20T19:30" → the correct UTC ISO instant. The naive
- * input is read as Beijing wall-clock time (Asia/Shanghai, +08:00) so it is
- * stored as the instant the host actually meant; empty → null.
+ * The client (date-time-field) already converted the host's browser-local
+ * wall-clock to a UTC ISO instant, so the server just VALIDATES it — it never
+ * re-interprets the wall-clock (the server has no viewer tz, so doing the
+ * conversion here is the bug we're avoiding). Empty → null; an unparseable value
+ * → an error; otherwise the canonical ISO instant.
+ *
+ * The value MUST carry an explicit zone (a trailing `Z` or `±HH:MM`). The client
+ * always sends a UTC ISO, so a zoneless `"YYYY-MM-DDTHH:mm"` means the client-side
+ * conversion didn't happen (JS off, a bug, or a forged POST). `Date.parse` would
+ * silently read such a value as the SERVER's local time and mis-store it — exactly
+ * the server-tz coercion this design forbids — so we reject it instead.
  */
+const ZONED_ISO = /(?:Z|[+-]\d{2}:?\d{2})$/;
 function parseDateTime(raw: string, label: string): string | null | { error: string } {
   const v = raw.trim();
   if (v === "") return null;
-  const iso = localInputToISO(v);
-  if (iso === null) return { error: `That ${label} doesn't look like a valid date and time.` };
-  return iso;
+  const ms = Date.parse(v);
+  if (Number.isNaN(ms) || !ZONED_ISO.test(v)) {
+    return { error: `That ${label} doesn't look like a valid date and time.` };
+  }
+  return new Date(ms).toISOString();
 }
 
 /**

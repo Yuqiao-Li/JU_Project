@@ -6,7 +6,6 @@ import { useActionState, useState } from "react";
 import { CoverUploader } from "@/components/events/cover-uploader";
 import { DateTimeField } from "@/components/events/date-time-field";
 import { DEFAULT_THEME, EFFECT_PRESETS, THEME_SWATCHES, type ThemeKey } from "@/lib/events/theme";
-import { isoToLocalInput } from "@/lib/events/timezone";
 
 import { createEvent, type EventFormState, updateEvent } from "./actions";
 
@@ -62,11 +61,6 @@ const BLANK: EventDefaults = {
 
 const inputClass =
   "h-12 w-full rounded-xl border border-line bg-surface-2 px-4 text-paper placeholder:text-muted/60 focus:border-iris focus:outline-none disabled:opacity-50";
-
-/** ISO instant → "YYYY-MM-DDTHH:mm" in Beijing time for a datetime-local input. */
-function toLocalInput(iso: string | null): string {
-  return isoToLocalInput(iso);
-}
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return <p className="eyebrow">{children}</p>;
@@ -198,14 +192,14 @@ export function EventForm({ mode, defaults }: { mode: "create" | "edit"; default
               {t("startsLabel")}
             </label>
             {/* Custom field: display LOCKED to "yyyy/mm/dd HH:mm" (24h) for every locale,
-                unlike native datetime-local which follows the browser language. It still
-                submits the same naive "YYYY-MM-DDTHH:mm" string, so schema/timezone are
-                unchanged. Display-side date formatting elsewhere is separate (§7.4). */}
+                unlike native datetime-local which follows the browser language. It edits
+                a UTC instant and submits a UTC ISO — the browser-local↔UTC conversion is
+                client-side (the host's tz is only known there). §7.4 Pass B. */}
             <DateTimeField
               id="starts_at"
               name="starts_at"
               disabled={dateTbd}
-              defaultValue={toLocalInput(d.startsAt)}
+              defaultIso={d.startsAt}
               className={inputClass}
             />
           </div>
@@ -217,7 +211,7 @@ export function EventForm({ mode, defaults }: { mode: "create" | "edit"; default
               id="ends_at"
               name="ends_at"
               disabled={dateTbd}
-              defaultValue={toLocalInput(d.endsAt)}
+              defaultIso={d.endsAt}
               className={inputClass}
             />
           </div>

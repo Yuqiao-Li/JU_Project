@@ -12,18 +12,31 @@ import { createClient } from "@/lib/supabase/server";
  * unless auth.uid() = events.host_id, D7③). We run them through the HOST's OWN authed
  * client (never the trusted role, which would bypass that gate) and merely forward the
  * call. The session re-check is belt-and-braces — server actions are reachable by direct
- * POST. Candidate dates are written with the same datetime-local-string handling the
- * event's own start time uses (parseEventForm), so the poll stays consistent with it.
+ * POST. Candidate dates arrive as UTC ISO instants the client (DateTimeField) already
+ * converted from the host's browser-local wall-clock — the same write path the event's own
+ * start time uses (parseEventForm) — so the poll stays consistent with it; here we only
+ * validate the ISO.
  */
 
 export type DatePollState = { status: "idle" | "success" | "error"; message?: string };
 
-/** Datetime-local string ("2030-01-01T18:00"); empty → null; must be parseable. */
+/**
+ * The client (DateTimeField) already converted the host's browser-local
+ * wall-clock to a UTC ISO instant, so we just VALIDATE it here (the server has no
+ * viewer tz). The value MUST carry an explicit zone (trailing `Z`/`±HH:MM`): a
+ * zoneless value would be read as the SERVER's local time by Date.parse and
+ * mis-stored — reject it rather than coerce. Empty → null; bad/zoneless → error;
+ * else the canonical ISO instant.
+ */
+const ZONED_ISO = /(?:Z|[+-]\d{2}:?\d{2})$/;
 function parseDateTime(raw: string): string | null | { error: string } {
   const v = raw.trim();
   if (v === "") return null;
-  if (Number.isNaN(Date.parse(v))) return { error: "That date and time doesn't look valid." };
-  return v;
+  const ms = Date.parse(v);
+  if (Number.isNaN(ms) || !ZONED_ISO.test(v)) {
+    return { error: "That date and time doesn't look valid." };
+  }
+  return new Date(ms).toISOString();
 }
 
 export async function addDateOption(_prev: DatePollState, formData: FormData): Promise<DatePollState> {
