@@ -90,6 +90,12 @@ const ALLOWED_FEED_KEYS = new Set([
   "visibility",
   "status",
   "role",
+  // Per-event RSVP aggregates (migration 0017, audit H9). Pure non-sensitive
+  // integers — occupancy/counts over public.rsvps; no PII, identity, address,
+  // token, or secret rides along (each is a scalar ::int).
+  "going_count",
+  "maybe_count",
+  "waitlist_count",
 ]);
 // Explicit deny-list of sensitive columns that must never ride along.
 const BANNED_FEED_KEYS = [

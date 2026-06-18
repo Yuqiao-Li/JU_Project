@@ -26,6 +26,11 @@ const myEventSchema = z.object({
   visibility: z.string(),
   status: z.string(),
   role: z.enum(MY_EVENT_ROLES),
+  // Per-event RSVP counts (task 5 / H9) — going is occupancy (1 + plus_ones).
+  // Optional so a pre-0016 payload still parses.
+  going_count: z.number().optional(),
+  maybe_count: z.number().optional(),
+  waitlist_count: z.number().optional(),
 });
 
 export type MyEvent = z.infer<typeof myEventSchema>;

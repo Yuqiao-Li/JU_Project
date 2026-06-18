@@ -7,6 +7,7 @@ import { goingOccupancy, remainingSpots } from "@/lib/events/capacity";
 import { formatEventWhen } from "@/lib/events/format";
 import { createClient } from "@/lib/supabase/server";
 
+import { CopyContactsButton, type GuestContact } from "./copy-contacts-button";
 import { EventLifecycle } from "./event-lifecycle";
 import { PromoteButton } from "./promote-button";
 
@@ -66,6 +67,11 @@ export default async function HostEventDetailPage({ params }: { params: Promise<
   const maybe = rsvps.filter((r) => r.status === "maybe");
   const declined = rsvps.filter((r) => r.status === "not_going");
   const waitlist = rsvps.filter((r) => r.status === "waitlisted");
+
+  // Contacts for "copy all" (audit H11): everyone who left one (host-only data).
+  const contacts: GuestContact[] = [...going, ...maybe, ...waitlist]
+    .map((r) => ({ name: r.guests?.display_name ?? "", contact: r.guests?.contact ?? "" }))
+    .filter((c) => c.contact !== "");
 
   // Live headcount + remaining seats from the shared capacity helper (task 3.2): each
   // going RSVP occupies 1 + its plus-ones; remaining is null when there's no cap.
@@ -136,7 +142,10 @@ export default async function HostEventDetailPage({ params }: { params: Promise<
       {isFull && <p className="mt-3 text-sm text-muted">{t("fullNotice")}</p>}
 
       <section className="mt-10">
-        <h2 className="eyebrow">{t("guestList")}</h2>
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="eyebrow">{t("guestList")}</h2>
+          <CopyContactsButton contacts={contacts} />
+        </div>
         {going.length + maybe.length + declined.length === 0 ? (
           <p className="mt-3 text-sm text-muted">{t("noReplies")}</p>
         ) : (

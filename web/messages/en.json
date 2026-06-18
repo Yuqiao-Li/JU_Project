@@ -53,7 +53,10 @@
       "private": "Private"
     },
     "card": {
-      "locationSeparator": " · "
+      "locationSeparator": " · ",
+      "goingCount": "{count} going",
+      "waitlistCount": "{count} waitlist",
+      "maybeCount": "{count} maybe"
     },
     "copyLink": {
       "label": "Copy link",
@@ -167,7 +170,9 @@
     "deleteConfirm": "Deleting is permanent — all RSVPs and comments are removed too. Delete?",
     "actionFailed": "Something went wrong. Try again.",
     "previewAsGuest": "Preview as guest",
-    "draftLinkHint": "This event is still a draft — the link only works for guests after you publish."
+    "draftLinkHint": "This event is still a draft — the link only works for guests after you publish.",
+    "copyContacts": "Copy all contacts ({count})",
+    "copyContactsCopied": "Copied"
   },
   "settings": {
     "backToEvents": "Back to events",

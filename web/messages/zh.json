@@ -53,7 +53,10 @@
       "private": "私密"
     },
     "card": {
-      "locationSeparator": " · "
+      "locationSeparator": " · ",
+      "goingCount": "{count} 人来",
+      "waitlistCount": "{count} 候补",
+      "maybeCount": "{count} 待定"
     },
     "copyLink": {
       "label": "复制链接",
@@ -167,7 +170,9 @@
     "deleteConfirm": "删除无法恢复，所有回复和评论都会一并删除。确定删除吗？",
     "actionFailed": "操作失败，请重试。",
     "previewAsGuest": "以访客身份预览",
-    "draftLinkHint": "活动还是草稿——发布后这个链接才对访客生效。"
+    "draftLinkHint": "活动还是草稿——发布后这个链接才对访客生效。",
+    "copyContacts": "复制全部联系方式（{count}）",
+    "copyContactsCopied": "已复制"
   },
   "settings": {
     "backToEvents": "返回活动",

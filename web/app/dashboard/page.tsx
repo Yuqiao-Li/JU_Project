@@ -97,6 +97,7 @@ export default async function DashboardPage() {
               roleLabels={{ hosting: t("role.hosting"), going: t("role.going") }}
               privateLabel={t("badge.private")}
               locationSeparator={t("card.locationSeparator")}
+              t={t}
             />
             {past.length > 0 && (
               <EventSection
@@ -106,6 +107,7 @@ export default async function DashboardPage() {
                 roleLabels={{ hosting: t("role.hosting"), going: t("role.going") }}
                 privateLabel={t("badge.private")}
                 locationSeparator={t("card.locationSeparator")}
+                t={t}
               />
             )}
           </div>
@@ -116,6 +118,7 @@ export default async function DashboardPage() {
 }
 
 type RoleLabels = { hosting: string; going: string };
+type Translator = Awaited<ReturnType<typeof getTranslations>>;
 
 function EventSection({
   title,
@@ -125,6 +128,7 @@ function EventSection({
   roleLabels,
   privateLabel,
   locationSeparator,
+  t,
 }: {
   title: string;
   events: MyEvent[];
@@ -133,6 +137,7 @@ function EventSection({
   roleLabels: RoleLabels;
   privateLabel: string;
   locationSeparator: string;
+  t: Translator;
 }) {
   return (
     <section>
@@ -149,6 +154,7 @@ function EventSection({
                 roleLabels={roleLabels}
                 privateLabel={privateLabel}
                 locationSeparator={locationSeparator}
+                t={t}
               />
             </li>
           ))}
@@ -164,12 +170,14 @@ function EventCard({
   roleLabels,
   privateLabel,
   locationSeparator,
+  t,
 }: {
   event: MyEvent;
   muted: boolean;
   roleLabels: RoleLabels;
   privateLabel: string;
   locationSeparator: string;
+  t: Translator;
 }) {
   const isHost = event.role === "host";
   // A host owns the event → land on the management detail page; an attendee opens
@@ -202,6 +210,13 @@ function EventCard({
         {when}
         {event.location_city ? `${locationSeparator}${event.location_city}` : ""}
       </p>
+      {isHost && typeof event.going_count === "number" && (
+        <p className="mt-2 text-sm text-paper">
+          {t("card.goingCount", { count: event.going_count })}
+          {event.waitlist_count ? ` · ${t("card.waitlistCount", { count: event.waitlist_count })}` : ""}
+          {event.maybe_count ? ` · ${t("card.maybeCount", { count: event.maybe_count })}` : ""}
+        </p>
+      )}
     </Link>
   );
 }
