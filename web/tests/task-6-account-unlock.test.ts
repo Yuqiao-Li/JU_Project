@@ -451,18 +451,56 @@ describe("Batch 6 [SECURITY] H16: get_event_by_slug + guest_unlock_status truste
       expect(anNone.obj?.unlocked, "no token + null viewer_id + anon ⇒ locked").toBe(false);
       expect(anNone.obj?.guest_id).toBeNull();
 
-      // 更狠 — the gate's viewer_id is NOT itself trusted-gated (the TRUST gating lives in
-      // get_event_by_slug); the helper honours coalesce(auth.uid(), viewer_id) for ANY caller.
-      // So an ANON passing a viewer_id DOES unlock the GATE directly. This is fine because
-      // anon has no direct table access and the public read path NEVER forwards a viewer_id
-      // unless service_role — but we pin the behaviour so a regression in get_event_by_slug's
-      // forcing-to-null can't hide behind the gate. (auth.uid() is null for anon ⇒ the
-      // coalesce reduces to viewer_id.)
+      // 更狠 — POST-0019 the gate itself trust-gates viewer_id: it is honoured ONLY when
+      // auth.role() = 'service_role' (forced to null otherwise), mirroring get_event_by_slug
+      // (0018, :165-166). This closes the oracle where an anon caller hitting the helper
+      // DIRECTLY via PostgREST with viewer_id => <some account uuid> could probe whether that
+      // account holds a going/maybe/waitlisted RSVP. hostA.id is a uid that LEGITIMATELY owns a
+      // going account row on PUB (T_ACCT_A_PUB) — but an anon caller passing it must get
+      // unlocked=false / no guest_id, because v_viewer is forced to null for non-service_role
+      // and anon has no auth.uid(), so coalesce(auth.uid(), v_viewer) is null ⇒ account branch
+      // can't match anything.
       const anViewer = await callGate(anon(), pubId, { viewerId: hostA.id });
+      expect(anViewer.res.error, JSON.stringify(anViewer.res.error)).toBeNull();
       expect(
         anViewer.obj?.unlocked,
-        "gate itself applies coalesce(auth.uid(), viewer_id) for any caller (trust gating is the slug-fn's job)",
+        "0019: anon's viewer_id is IGNORED (forced null for non-service_role) ⇒ no RSVP-attendance oracle",
+      ).toBe(false);
+      expect(
+        anViewer.obj?.guest_id,
+        "0019: a non-service caller's viewer_id leaks no guest_id (the account branch never matches)",
+      ).toBeNull();
+      expect(
+        anViewer.obj?.status,
+        "0019: no status leaks to an anon viewer_id probe",
+      ).toBeNull();
+
+      // An AUTHENTICATED non-owner is equally barred: host B (role 'authenticated') passing
+      // host A's uid as viewer_id can't probe A's attendance — v_viewer is forced to null, and
+      // coalesce falls back to B's OWN auth.uid() (not A), so A's going row is never consulted.
+      // B has only a not_going row on PUB ⇒ locked, and crucially the answer is driven by B's
+      // identity, not the foreign viewer_id.
+      const authViewer = await callGate(asHost(hostB.accessToken), pubId, { viewerId: hostA.id });
+      expect(authViewer.res.error, JSON.stringify(authViewer.res.error)).toBeNull();
+      expect(
+        authViewer.obj?.unlocked,
+        "0019: an authenticated non-owner's viewer_id is ignored ⇒ cannot probe A's attendance",
+      ).toBe(false);
+      expect(
+        authViewer.obj?.status,
+        "0019: resolves to B's OWN account row (not A's going row) — viewer_id never consulted",
+      ).toBe("not_going");
+
+      // The trusted SSR path is PRESERVED: service_role passing the SAME viewer_id still
+      // unlocks (auth.role()='service_role' ⇒ v_viewer honoured), so the legitimate
+      // account-unlock-without-token path keeps working.
+      const ssrViewer = await callGate(service(), pubId, { viewerId: hostA.id });
+      expect(ssrViewer.res.error, JSON.stringify(ssrViewer.res.error)).toBeNull();
+      expect(
+        ssrViewer.obj?.unlocked,
+        "0019: service_role still honours viewer_id ⇒ the SSR account-unlock path survives",
       ).toBe(true);
+      expect(ssrViewer.obj?.status, "service_role + going viewer_id ⇒ going").toBe("going");
 
       // The TOKEN path is unchanged by the new arg — token still wins / scopes per event.
       const tok = await callGate(anon(), pubId, { token: T_TOKEN_GOING });
