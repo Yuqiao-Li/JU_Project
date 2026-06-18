@@ -186,7 +186,9 @@ export function LoginForm({ next }: { next: string }) {
         </p>
         <p className="mt-3 text-sm text-muted">{t("spamHint")}</p>
 
-        {/* Or finish without leaving this tab: type the 6-digit code. */}
+        {/* Or finish without leaving this tab: type the code from the email. Supabase's
+            OTP length is project-configurable (this project issues 8 digits), so accept up
+            to 8 — never hard-cap at 6, or a longer code can't be entered. */}
         <form onSubmit={verifyCode} className="mt-5 flex flex-col gap-3 text-left">
           <label htmlFor="otp" className="eyebrow text-center">
             {t("otpLabel")}
@@ -196,7 +198,7 @@ export function LoginForm({ next }: { next: string }) {
             type="text"
             inputMode="numeric"
             autoComplete="one-time-code"
-            maxLength={6}
+            maxLength={8}
             value={code}
             onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
             placeholder={t("otpPlaceholder")}
