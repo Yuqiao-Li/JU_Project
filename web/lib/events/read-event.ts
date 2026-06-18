@@ -1,6 +1,7 @@
 import "server-only";
 
-import { eventViewSchema, type EventView } from "@/lib/events/view";
+import { type EventView } from "@/lib/events/view";
+import { resolveEventReadResult } from "@/lib/events/read-event-core";
 import { createServiceClient } from "@/lib/supabase/service";
 
 /**
@@ -50,16 +51,21 @@ export interface ReadEventOptions {
 
 /**
  * Resolve an event façade through the trusted role. Returns null when the slug is
- * unknown, when a private event is denied (the RPC returns null), or when the
- * payload fails validation — callers render notFound()/404 uniformly so a private
- * event isn't distinguishable from a missing one.
+ * unknown or when a private event is denied (the RPC returns null with no error) —
+ * callers render notFound()/404 uniformly so a private event isn't distinguishable
+ * from a missing one.
+ *
+ * THROWS (→ 500 / app/error.tsx) on a genuine RPC error or on payload schema-validation
+ * failure — those signal an infra/config fault (wrong/expired service-role key, RPC
+ * signature/schema behind the app, or app↔DB schema drift), NOT a missing event, so we
+ * fail loud instead of swallowing them into a misleading 404. See read-event-core.ts.
  */
 export async function readEventBySlug(
   slug: string,
   opts: ReadEventOptions = {},
 ): Promise<EventView | null> {
   const supabase = createServiceClient();
-  const { data, error } = await supabase.rpc("get_event_by_slug", {
+  const result = await supabase.rpc("get_event_by_slug", {
     slug,
     guest_token: opts.guestToken ?? undefined,
     password: opts.password ?? undefined,
@@ -67,8 +73,5 @@ export async function readEventBySlug(
     viewer_id: opts.viewerId ?? undefined,
   });
 
-  if (error || data == null) return null;
-
-  const parsed = eventViewSchema.safeParse(data);
-  return parsed.success ? parsed.data : null;
+  return resolveEventReadResult(slug, result);
 }
