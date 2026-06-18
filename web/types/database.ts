@@ -7,6 +7,31 @@ export type Json =
   | Json[]
 
 export type Database = {
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
   public: {
     Tables: {
       answers: {
@@ -719,6 +744,7 @@ export type Database = {
         Returns: Json
       }
       get_my_events: { Args: never; Returns: Json }
+      get_public_events: { Args: never; Returns: Json }
       get_public_events_by_host: { Args: { username: string }; Returns: Json }
       guest_unlock_status: {
         Args: { event_id: string; token?: string; viewer_id?: string }
@@ -880,6 +906,9 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {},
   },

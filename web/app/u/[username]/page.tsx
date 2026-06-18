@@ -3,7 +3,7 @@ import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 
 import { Wordmark } from "@/components/brand/wordmark";
-import { LocalWhen } from "@/components/events/local-when";
+import { PublicEventCard } from "@/components/events/public-event-card";
 import {
   groupPublicEventsByTime,
   type PublicEvent,
@@ -133,50 +133,10 @@ function EventSection({
       <ul className="mt-4 grid gap-4 sm:grid-cols-2">
         {events.map((event) => (
           <li key={event.id}>
-            <EventCard event={event} muted={muted} dateTbdLabel={dateTbdLabel} />
+            <PublicEventCard event={event} muted={muted} dateTbdLabel={dateTbdLabel} />
           </li>
         ))}
       </ul>
     </section>
-  );
-}
-
-function EventCard({
-  event,
-  muted,
-  dateTbdLabel,
-}: {
-  event: PublicEvent;
-  muted: boolean;
-  dateTbdLabel: string;
-}) {
-  const whenIso = event.date_tbd ? null : event.starts_at;
-  return (
-    <Link
-      href={`/${event.slug}`}
-      className={`group block overflow-hidden rounded-2xl border border-line bg-surface/60 transition hover:border-iris/50 hover:bg-surface ${
-        muted ? "opacity-80" : ""
-      }`}
-    >
-      <div
-        className="aspect-[16/9] w-full bg-surface-2 bg-cover bg-center"
-        style={
-          event.cover_image_url
-            ? { backgroundImage: `url(${JSON.stringify(event.cover_image_url)})` }
-            : undefined
-        }
-      >
-        {!event.cover_image_url && (
-          <div className="h-full w-full bg-gradient-to-br from-iris/25 via-surface-2 to-coral/20" />
-        )}
-      </div>
-      <div className="p-5">
-        <h3 className="font-display text-lg font-bold text-paper">{event.title}</h3>
-        <p className="mt-1 text-sm text-muted">
-          <LocalWhen iso={whenIso} tbdLabel={dateTbdLabel} />
-          {event.location_city ? ` · ${event.location_city}` : ""}
-        </p>
-      </div>
-    </Link>
   );
 }

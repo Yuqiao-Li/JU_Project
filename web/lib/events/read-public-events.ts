@@ -39,3 +39,29 @@ export async function readPublicEventsByHost(username: string): Promise<PublicEv
   if (data == null) return [];
   return parsePublicEvents(data);
 }
+
+/**
+ * Server-side read of EVERY public event for the site-wide discovery page
+ * (Round-3 #6, /discover). Same security stance as readPublicEventsByHost:
+ * anon has NO direct privilege on `events`, so the whole public list is reached
+ * ONLY through get_public_events (SECURITY DEFINER), which returns ONLY public +
+ * published events (never private / draft / cancelled), first-tier façade fields
+ * only — no address, no guest list, no contact — plus the host's display name.
+ *
+ * Anon-keyed server client on purpose: fully public data, least-privileged path.
+ *
+ * ERROR vs EMPTY (H20): a real RPC failure throws so the route error boundary can
+ * show retry, never masquerading as "no public events". A null/empty payload with
+ * NO error stays [] — the legitimate "nothing published yet" empty state.
+ */
+export async function readAllPublicEvents(): Promise<PublicEvent[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("get_public_events");
+
+  if (error) {
+    console.error("[discover] get_public_events failed:", error.message);
+    throw new Error("Failed to load public events");
+  }
+  if (data == null) return [];
+  return parsePublicEvents(data);
+}

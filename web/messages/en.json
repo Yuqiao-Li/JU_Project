@@ -11,6 +11,7 @@
     "tagline": "Throw something good.",
     "subtitle": "Make an event, share one link, and watch the yeses roll in. Your guests RSVP in seconds — no account, no app.",
     "cta": "Start hosting",
+    "browseEvents": "Browse public events",
     "note": "Hosting needs an account; guests never sign in."
   },
   "auth": {
@@ -343,6 +344,16 @@
     "upcoming": "Upcoming",
     "past": "Past",
     "loading": "Loading profile…"
+  },
+  "discover": {
+    "eyebrow": "Discover",
+    "title": "See what people are throwing",
+    "subtitle": "Browse every public event — no account needed to look. Want to throw your own? Sign in to start.",
+    "createCta": "New event",
+    "hostedBy": "Hosted by {name}",
+    "past": "Past",
+    "emptyTitle": "No public events yet.",
+    "emptyBody": "Public events show up here the moment they're published. Want to throw the first one?"
   },
   "errors": {
     "generic": {

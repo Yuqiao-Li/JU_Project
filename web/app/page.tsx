@@ -29,12 +29,18 @@ export default async function Home() {
           {t("tagline")}
         </h1>
         <p className="mx-auto mt-4 max-w-md text-balance text-muted">{t("subtitle")}</p>
-        <div className="mt-8 flex items-center justify-center">
+        <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
           <Link
             href="/login"
             className="inline-flex h-12 items-center justify-center rounded-xl bg-coral px-7 font-semibold text-ink transition hover:brightness-105"
           >
             {t("cta")}
+          </Link>
+          <Link
+            href="/discover"
+            className="inline-flex h-12 items-center justify-center rounded-xl border border-line px-7 font-semibold text-paper transition hover:border-iris/60 hover:bg-surface/60"
+          >
+            {t("browseEvents")}
           </Link>
         </div>
         <p className="mt-6 text-xs text-muted">{t("note")}</p>

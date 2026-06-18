@@ -26,6 +26,11 @@ const publicEventSchema = z.object({
   ends_at: z.string().nullable(),
   date_tbd: z.boolean(),
   location_city: z.string().nullable(),
+  // Site-wide discovery (Round-3 #6, get_public_events) adds the host's display
+  // name so a card can show who's hosting. OPTIONAL so the per-host profile path
+  // (get_public_events_by_host), which omits it, still parses. Still first-tier:
+  // a public display name, never an identity/contact field.
+  host_display_name: z.string().nullable().optional(),
 });
 
 export type PublicEvent = z.infer<typeof publicEventSchema>;
