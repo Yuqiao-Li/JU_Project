@@ -358,7 +358,7 @@ export function DateTimeField({ name, id, defaultIso, disabled = false, classNam
           disabled={disabled}
           aria-disabled={disabled || undefined}
           placeholder="yyyy/mm/dd HH:mm"
-          className="h-full w-full bg-transparent text-paper placeholder:text-muted/60 focus:outline-none disabled:cursor-not-allowed"
+          className="h-full w-full bg-transparent text-paper placeholder:text-muted/60 focus:outline-none focus-ring-off disabled:cursor-not-allowed"
         />
         <button
           ref={triggerRef}

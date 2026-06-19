@@ -128,6 +128,19 @@ body {
   border-radius: 4px;
 }
 
+/* Opt OUT of the app-wide ring above for a control whose focus is already shown on
+ * its WRAPPER (e.g. the /u/ username field and the date-time field use
+ * `focus-within:border-iris` on the parent) — otherwise the inner control ALSO draws
+ * the ring above and you get a doubled, offset outline.
+ *
+ * This rule MUST live here, UNLAYERED, next to the rule it overrides: Tailwind's
+ * `focus-visible:outline-none` utility sits in a cascade LAYER, and an unlayered rule
+ * always beats a layered one regardless of specificity — so the utility silently did
+ * nothing against `:focus-visible` above. Same-layer + higher specificity wins. */
+.focus-ring-off:focus-visible {
+  outline: none;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .aurora {
     animation: none;

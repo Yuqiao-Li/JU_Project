@@ -4,67 +4,91 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
 /**
- * REGRESSION GUARD — the username field must not paint a DOUBLED focus ring (#4).
+ * REGRESSION GUARD — wrapper-based fields must not paint a DOUBLED focus ring (#4).
  *
- * THE BUG THIS LOCKS IN:
- *   In `app/dashboard/settings/profile-form.tsx` the username `<input>` lives INSIDE a
- *   container div that already shows the single focus indicator via `focus-within:border-iris`
- *   (the iris border lights up when anything inside is focused). The bare `<input>`, however,
- *   ALSO got the browser/Tailwind default focus-visible outline — so focusing the field painted
- *   a SECOND, offset focus ring INSIDE the bordered container: two competing indicators, ugly.
- *   The fix adds `focus-visible:outline-none` to the input so the container's
- *   `focus-within:border-iris` is the ONE focus indicator.
+ * THE BUG:
+ *   The username field (`profile-form.tsx`) and the date-time field
+ *   (`date-time-field.tsx`) put an `<input>` INSIDE a container that already shows focus
+ *   via `focus-within:border-iris`. The inner input ALSO matched the app-wide
+ *   `:focus-visible { outline: 2px solid iris; … }` rule in `globals.css`, so focusing
+ *   the field painted a SECOND, offset ring INSIDE the bordered container.
  *
- * THE INVARIANT (pinned here so a future edit can't re-introduce the doubled ring):
- *   1. the username `<input id="username" …>` className contains `focus-visible:outline-none`.
- *   2. its wrapping container div still carries `focus-within:border-iris` (the single indicator).
+ * WHY THE FIRST FIX (a Tailwind `focus-visible:outline-none` utility) DID NOTHING:
+ *   that global `:focus-visible` rule is UNLAYERED, and Tailwind utilities live in a
+ *   cascade LAYER. An unlayered rule beats a layered one regardless of specificity — so
+ *   the utility was silently overridden. The working fix is an UNLAYERED override rule in
+ *   globals.css (`.focus-ring-off:focus-visible { outline: none }`) plus the
+ *   `focus-ring-off` class on each wrapped input.
  *
- * Pure SOURCE-GREP (Node `fs`, NO DB, NO React render — vitest runs `node`), in the same
- * comment-stripped static-guard style as `client-tree-no-server-getTranslations.test.ts`.
- * Comments are stripped first so prose that NAMES these class tokens can't self-trip the grep.
+ * INVARIANT (pinned so neither the class nor the unlayered override regresses):
+ *   1. the username `<input id="username">` className contains `focus-ring-off`.
+ *   2. the date-time field's masked `<input>` className contains `focus-ring-off`.
+ *   3. globals.css carries the UNLAYERED `.focus-ring-off:focus-visible { outline: none }`
+ *      override (the thing that actually wins over the app-wide ring).
+ *   4. both wrappers keep `focus-within:border-iris` (the single focus indicator).
+ *
+ * Pure SOURCE-GREP (Node `fs`, NO DB, NO React render), comment-stripped first so prose
+ * naming these tokens can't self-trip the grep. NB: a source grep can't prove the CSS
+ * *renders* correctly (the cascade-layer trap is exactly why) — the real check is a
+ * browser; this only locks in the mechanism so it isn't reverted.
  */
 
-/** Read an implementation source file by repo-relative path (relative to this test file). */
 function src(rel: string): string {
   return readFileSync(fileURLToPath(new URL(`../${rel}`, import.meta.url)), "utf8");
 }
 
-/** Strip block + line comments so we grep CODE (real className strings), not prose. */
 function stripComments(source: string): string {
   return source
-    .replace(/\/\*[\s\S]*?\*\//g, "") // block comments
-    .replace(/(^|[^:])\/\/[^\n]*/g, "$1"); // line comments (keep the char before "//")
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .replace(/(^|[^:])\/\/[^\n]*/g, "$1");
 }
 
-const PROFILE_FORM_REL = "app/dashboard/settings/profile-form.tsx";
-const CODE = stripComments(src(PROFILE_FORM_REL));
+/** Slice the `<input …>` element that carries the given attribute. */
+function inputWith(code: string, attr: string): string {
+  const idIdx = code.indexOf(attr);
+  expect(idIdx, `source contains an input with ${attr}`).toBeGreaterThan(-1);
+  const openIdx = code.lastIndexOf("<input", idIdx);
+  const closeIdx = code.indexOf("/>", idIdx);
+  expect(openIdx, "found the opening <input").toBeGreaterThan(-1);
+  expect(closeIdx, "found the self-closing />").toBeGreaterThan(idIdx);
+  return code.slice(openIdx, closeIdx);
+}
 
-describe("FOCUS-RING GUARD: the username field shows ONE focus indicator, not a doubled ring (#4)", () => {
-  // Pull the username <input …> element (id="username") out of the code so the className
-  // assertion is scoped to THAT input — not, e.g., the display_name input above it.
-  const usernameInput = (() => {
-    const idIdx = CODE.indexOf('id="username"');
-    expect(idIdx, "profile-form.tsx contains the username input (id=\"username\")").toBeGreaterThan(-1);
-    // The <input …/> that carries id="username": from the nearest "<input" before it to the
-    // next "/>" after it.
-    const openIdx = CODE.lastIndexOf("<input", idIdx);
-    const closeIdx = CODE.indexOf("/>", idIdx);
-    expect(openIdx, "found the opening <input of the username field").toBeGreaterThan(-1);
-    expect(closeIdx, "found the self-closing /> of the username field").toBeGreaterThan(idIdx);
-    return CODE.slice(openIdx, closeIdx);
-  })();
+const PROFILE = stripComments(src("app/dashboard/settings/profile-form.tsx"));
+const PICKER = stripComments(src("components/events/date-time-field.tsx"));
+const GLOBALS = src("app/globals.css"); // CSS — no JS comments to strip
 
-  it("the username <input id=\"username\"> kills its own focus-visible outline (no second offset ring)", () => {
-    expect(
-      usernameInput.includes("focus-visible:outline-none"),
-      "username input className must contain focus-visible:outline-none so it doesn't paint a second focus ring",
-    ).toBe(true);
+describe("FOCUS-RING GUARD: wrapped fields show ONE focus indicator, not a doubled ring (#4)", () => {
+  it("the username <input id=\"username\"> opts out of the app-wide ring via focus-ring-off", () => {
+    expect(inputWith(PROFILE, 'id="username"').includes("focus-ring-off")).toBe(true);
   });
 
-  it("the wrapping container still carries focus-within:border-iris (the SINGLE focus indicator is preserved)", () => {
+  it("the date-time field's masked <input> opts out of the app-wide ring via focus-ring-off", () => {
+    // The masked text input carries the yyyy/mm/dd HH:mm placeholder.
+    expect(inputWith(PICKER, 'placeholder="yyyy/mm/dd HH:mm"').includes("focus-ring-off")).toBe(true);
+  });
+
+  it("globals.css carries the UNLAYERED .focus-ring-off:focus-visible override that actually wins", () => {
+    // The override must exist AND set outline:none — this is what beats the app-wide
+    // unlayered :focus-visible rule (a layered Tailwind utility could not).
     expect(
-      CODE.includes("focus-within:border-iris"),
-      "the username field's container div must keep focus-within:border-iris as the one focus indicator",
+      /\.focus-ring-off:focus-visible\s*\{[^}]*outline:\s*none/.test(GLOBALS),
+      "globals.css must define .focus-ring-off:focus-visible { outline: none } (unlayered)",
     ).toBe(true);
+    // And it must NOT be wrapped in an @layer (unlayered, so it beats the app-wide rule).
+    const ruleIdx = GLOBALS.indexOf(".focus-ring-off:focus-visible");
+    const before = GLOBALS.slice(0, ruleIdx);
+    const lastLayerOpen = before.lastIndexOf("@layer");
+    if (lastLayerOpen !== -1) {
+      // If there's an @layer before it, that block must already be closed.
+      const opens = (before.slice(lastLayerOpen).match(/\{/g) ?? []).length;
+      const closes = (before.slice(lastLayerOpen).match(/\}/g) ?? []).length;
+      expect(closes, "the .focus-ring-off rule is NOT inside an open @layer block").toBeGreaterThanOrEqual(opens);
+    }
+  });
+
+  it("both wrappers keep focus-within:border-iris as the single focus indicator", () => {
+    expect(PROFILE.includes("focus-within:border-iris")).toBe(true);
+    expect(PICKER.includes("focus-within:border-iris")).toBe(true);
   });
 });
