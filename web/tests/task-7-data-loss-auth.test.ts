@@ -1,11 +1,7 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
-import type { SupabaseClient } from "@supabase/supabase-js";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
-
-import { hostClient, infra } from "./helpers/clients";
-import { localStackRunning } from "./setup/local-supabase";
+import { describe, expect, it } from "vitest";
 
 /**
  * Batch 7 [DATA-LOSS + AUTH] — audit H19 / H20 / H21 / H22 / M49.
@@ -22,10 +18,14 @@ import { localStackRunning } from "./setup/local-supabase";
  *   H21 — assume the auth callback ignores provider/OTP `error*` params and dumps
  *         every failure on the generic "link expired" page (telling a user who
  *         cancelled Google that their link expired), with no reason classification.
- *   H19 — assume an empty username field silently writes username=null and deletes
- *         the public /u/<handle> — the irreversible data-loss bug. The SERVER must
- *         refuse the clear without an explicit confirm; a legitimate set/change of
- *         a username must STILL go through untouched.
+ *   H19 — (RETIRED by Step-10A task 7) the username-clear data-loss guard pinned the
+ *         settings form's public-username field + its clear-confirm flow + the
+ *         USERNAME_CLEAR_UNCONFIRMED server sentinel. The public-username handle is
+ *         retired (入口是局不是人, §5): the single name field IS the nickname
+ *         (display_name); username is no longer surfaced/edited. The clear-confirm UI
+ *         and sentinel are intentionally GONE, so those assertions are removed. In
+ *         their place we pin the new settings contract (see "Step-10A task 7" block):
+ *         updateProfile writes profiles.contact and the form is a single nickname.
  *   H20 — assume a transient RPC/fetch error collapses into the cheerful empty
  *         state ("No events yet"), hiding real events. The reader must THROW on a
  *         genuine error (route boundary → retry) yet still degrade a null/empty
@@ -34,9 +34,7 @@ import { localStackRunning } from "./setup/local-supabase";
  * The React client + Next server actions can't be rendered/imported under vitest
  * (`"use client"` / `"use server"` / `@/`-alias / next/cache / window), so those
  * invariants are pinned on the SOURCE TEXT — the same static-guard posture the
- * task-4 lifecycle suite uses. The one place a real behavioural regression can be
- * proven at runtime — that a legitimate username set/change still writes (H19
- * "unaffected") — is exercised against the live test DB.
+ * task-4 lifecycle suite uses.
  */
 
 /** Read an implementation source file by repo-relative path (relative to this test). */
@@ -327,99 +325,128 @@ describe("Batch 7 [H21]: auth callback classifies provider/OTP errors (callback 
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// H19 — username-clear data-loss guard (profile-form client + server action).
+// Step-10A task 7 — settings simplification (REPLACES the retired H19 block).
+//
+// The public-username handle + its availability check + the clear-confirm
+// data-loss flow are retired (入口是局不是人, §5). The single name field IS the
+// host's nickname (display_name), and the host now owns a general `contact`
+// (profiles.contact), revealed to guests only AFTER the event finalizes
+// (double-blind, via get_event_by_slug). The DB `username` column is KEPT but no
+// longer surfaced/edited here. These pin the new settings contract on the SOURCE
+// TEXT (server action / server component / client form can't run under vitest).
 // ─────────────────────────────────────────────────────────────────────────────
 
-describe("Batch 7 [H19]: username-clear requires an explicit confirm (profile-form + actions)", () => {
-  it("the client only flags a CLEAR when a username previously existed (not on a never-set field)", () => {
+describe("Step-10A task 7: the settings form is a single nickname (display_name), username UI gone", () => {
+  it("the nickname field IS display_name — a required text input wired to the display_name name/id", () => {
+    // The one name field maps to display_name (the nickname), not a separate handle.
     expect(
-      /clearingUsername\s*=\s*hadUsername\s*&&\s*trimmed\s*===\s*""/.test(PROFILE_FORM) ||
-        /hadUsername[\s\S]{0,40}trimmed\s*===\s*""/.test(PROFILE_FORM),
-      "profile-form: clearing is hadUsername && empty (H19)",
+      /name="display_name"/.test(PROFILE_FORM),
+      "profile-form: a single name input named display_name",
     ).toBe(true);
     expect(
-      /initialUsername[\s\S]{0,40}!==\s*""/.test(PROFILE_FORM),
-      "profile-form: 'had a username' is derived from a non-empty initial value",
+      /id="display_name"/.test(PROFILE_FORM),
+      "profile-form: the nickname input is id=display_name",
     ).toBe(true);
-  });
-
-  it("the client requires an explicit confirm (checkbox) before a clear, with a warning naming /u/<old>", () => {
-    expect(/type="checkbox"/.test(PROFILE_FORM), "profile-form: a confirm checkbox exists").toBe(true);
+    // It is the nickname: labelled via the nicknameLabel key, and required.
     expect(
-      /confirmedClear|confirm_clear/.test(PROFILE_FORM),
-      "profile-form: a confirm flag gates the clear",
+      /t\(\s*["']nicknameLabel["']\s*\)/.test(PROFILE_FORM),
+      "profile-form: the field is labelled as the nickname (nicknameLabel)",
     ).toBe(true);
-    // The warning names the to-be-lost public handle.
+    // The display name is rendered required so the host always has a recognizable name.
     expect(
-      /\/u\/\{?\s*initialUsername/.test(PROFILE_FORM) || /usernameClearWarning/.test(PROFILE_FORM),
-      "profile-form: the warning names /u/<old handle>",
-    ).toBe(true);
-    // Submit is blocked until the clear is confirmed.
-    expect(
-      /disabled=\{[^}]*clearingUsername\s*&&\s*!confirmedClear/.test(PROFILE_FORM),
-      "profile-form: the Save button is disabled until the clear is confirmed",
+      /id="display_name"[\s\S]{0,200}\brequired\b/.test(PROFILE_FORM),
+      "profile-form: the nickname input is required",
     ).toBe(true);
   });
 
-  it("the client sends confirm_clear=true ONLY when the host actually confirmed the clear", () => {
-    // A regression that hard-coded confirm_clear=true (or sent it unconditionally)
-    // would defeat the whole guard.
+  it("the retired public-username UI is gone — no username input, availability check, or clear-confirm flow", () => {
+    // No separate username handle input.
+    expect(/id="username"/.test(PROFILE_FORM), "profile-form: no username input remains").toBe(false);
     expect(
-      /name="confirm_clear"\s+value=\{\s*clearingUsername\s*&&\s*confirmedClear\s*\?\s*["']true["']/.test(
-        PROFILE_FORM,
-      ),
-      "profile-form: confirm_clear is true only when clearing AND confirmed",
-    ).toBe(true);
-    expect(
-      /value=\{?\s*["']true["']\s*\}?[^>]*name="confirm_clear"/.test(PROFILE_FORM) ||
-        /name="confirm_clear"\s+value="true"/.test(PROFILE_FORM),
-      "profile-form: confirm_clear is NOT hard-coded to a constant true",
+      /name="username"/.test(PROFILE_FORM),
+      "profile-form: no username form field remains",
     ).toBe(false);
+    // No live availability check / username-check route call.
+    expect(
+      /username-check/.test(PROFILE_FORM),
+      "profile-form: no availability-check call remains",
+    ).toBe(false);
+    // No clear-confirm data-loss flow (the retired H19 mechanism).
+    expect(
+      /confirm_clear|confirmedClear|clearingUsername|USERNAME_CLEAR_UNCONFIRMED/.test(PROFILE_FORM),
+      "profile-form: no username clear-confirm flow remains",
+    ).toBe(false);
+    // No /u/ public-handle reference in the form copy.
+    expect(/\/u\//.test(PROFILE_FORM), "profile-form: no /u/<handle> reference remains").toBe(false);
   });
 
-  it("THE KEY GUARD — the SERVER action refuses to write username=null without confirm_clear, with the USERNAME_CLEAR_UNCONFIRMED sentinel", () => {
-    // This is the irreversible data-loss protection. The action must, on an empty
-    // username AND a previously-set value, require confirm_clear=true and otherwise
-    // bail BEFORE the UPDATE.
-    expect(
-      /confirm_clear/.test(SETTINGS_ACTIONS),
-      "actions: the server reads confirm_clear",
-    ).toBe(true);
+  it("the server action no longer carries the retired username-clear guard or writes username", () => {
     expect(
       /USERNAME_CLEAR_UNCONFIRMED/.test(SETTINGS_ACTIONS),
-      "actions: the refusal returns the USERNAME_CLEAR_UNCONFIRMED sentinel",
-    ).toBe(true);
-    // The refusal is conditioned on (had a previous username) AND (not confirmed),
-    // and RETURNS before writing — proving the server doesn't trust the client gate.
+      "actions: the retired clear-confirm sentinel is gone",
+    ).toBe(false);
     expect(
-      /if\s*\(\s*previous\s*&&\s*!confirmed\s*\)\s*\{?\s*return/.test(SETTINGS_ACTIONS) ||
-        /previous\s*&&\s*!confirmed[\s\S]{0,60}return\s*\{[\s\S]{0,80}USERNAME_CLEAR_UNCONFIRMED/.test(
-          SETTINGS_ACTIONS,
-        ),
-      "actions: refuses (returns) when a username existed and the clear isn't confirmed",
-    ).toBe(true);
-    // The server re-reads the EXISTING username (not the form) to decide.
+      /confirm_clear/.test(SETTINGS_ACTIONS),
+      "actions: the action no longer reads confirm_clear",
+    ).toBe(false);
+    // The UPDATE must NOT set the username column anymore (kept in DB, not edited here).
     expect(
-      /from\(\s*["']profiles["']\s*\)[\s\S]{0,80}select\(\s*["']username["']/.test(SETTINGS_ACTIONS),
-      "actions: re-reads the existing username server-side before allowing a clear",
+      /\.update\(\s*\{[^}]*\busername\b/.test(SETTINGS_ACTIONS),
+      "actions: the profiles UPDATE no longer writes the username column",
+    ).toBe(false);
+  });
+});
+
+describe("Step-10A task 7: updateProfile writes profiles.contact (host's general contact)", () => {
+  it("the form exposes a general contact input wired to the `contact` field", () => {
+    expect(/name="contact"/.test(PROFILE_FORM), "profile-form: a contact input named contact").toBe(
+      true,
+    );
+    expect(/id="contact"/.test(PROFILE_FORM), "profile-form: the contact input is id=contact").toBe(
+      true,
+    );
+    // It is the host's general contact — labelled via the contactLabel key.
+    expect(
+      /t\(\s*["']contactLabel["']\s*\)/.test(PROFILE_FORM),
+      "profile-form: the contact field is labelled (contactLabel)",
     ).toBe(true);
   });
 
-  it("a confirmed clear is NOT blocked — confirm_clear=true lets username=null through", () => {
-    // The guard must only fire on the UNconfirmed path: when confirmed, control
-    // falls through to the UPDATE with username=null. Assert the unconfirmed branch
-    // is the ONLY thing that returns the sentinel (i.e. it's gated by !confirmed).
-    const sentinelGatedByUnconfirmed =
-      /!confirmed[\s\S]{0,80}USERNAME_CLEAR_UNCONFIRMED/.test(SETTINGS_ACTIONS);
+  it("the server action reads the `contact` form value and persists it on the profiles UPDATE", () => {
+    // The action must pull `contact` off the FormData…
     expect(
-      sentinelGatedByUnconfirmed,
-      "actions: the sentinel is returned only on the !confirmed path (a confirmed clear proceeds)",
+      /formData\.get\(\s*["']contact["']\s*\)/.test(SETTINGS_ACTIONS),
+      "actions: reads the contact form value",
+    ).toBe(true);
+    // …and include `contact` in the columns it writes to the caller's own profiles row.
+    expect(
+      /\.update\(\s*\{[\s\S]*?\bcontact\b[\s\S]*?\}\s*\)/.test(SETTINGS_ACTIONS),
+      "actions: the profiles UPDATE includes the contact column",
+    ).toBe(true);
+    // The UPDATE is scoped to the caller's own row (id = auth.uid()), never a client id.
+    expect(
+      /\.update\([\s\S]*?\)\s*\.eq\(\s*["']id["']\s*,\s*user\.id\s*\)/.test(SETTINGS_ACTIONS),
+      "actions: the UPDATE is scoped to .eq('id', user.id) (own row only)",
     ).toBe(true);
   });
 
-  it("the settings clear-warning / clear-confirm / clear-blocked keys exist in BOTH catalogs", () => {
+  it("an empty contact clears it (null), and a too-long contact is rejected at the boundary", () => {
+    // Empty input clears the stored value to null rather than writing "".
+    expect(
+      /rawContact\.length\s*>\s*0\s*\?\s*rawContact\s*:\s*null/.test(SETTINGS_ACTIONS) ||
+        /contact[\s\S]{0,60}length\s*>\s*0[\s\S]{0,20}:\s*null/.test(SETTINGS_ACTIONS),
+      "actions: an empty contact is stored as null",
+    ).toBe(true);
+    // A bounded-length guard rejects an over-long contact before the write.
+    expect(
+      /rawContact\.length\s*>\s*\d+/.test(SETTINGS_ACTIONS),
+      "actions: a length bound guards the contact value",
+    ).toBe(true);
+  });
+
+  it("the settings catalogs carry the nickname + contact keys in BOTH locales (no missing-key fallback)", () => {
     for (const [name, cat] of [["en", EN], ["zh", ZH]] as const) {
-      for (const key of ["usernameClearWarning", "usernameClearConfirm", "usernameClearBlocked"] as const) {
+      for (const key of ["nicknameLabel", "contactLabel", "contactPlaceholder", "contactHint"] as const) {
         const v = cat?.settings?.[key];
         expect(typeof v === "string" && v.length > 0, `${name}.settings.${key} present`).toBe(true);
       }
@@ -473,63 +500,5 @@ describe("Batch 7 [H20]: a real RPC/fetch error throws (route boundary) instead 
       /if\s*\(\s*!?\s*data\s*\)[\s\S]{0,40}throw/.test(READ_PUBLIC),
       "read-public-events: an empty data set must NOT trigger a throw",
     ).toBe(false);
-  });
-});
-
-// ─────────────────────────────────────────────────────────────────────────────
-// H19 (runtime) — a LEGITIMATE username set/change is unaffected by the guard.
-//
-// The server action can't be invoked under vitest, but its only DB effect is an
-// UPDATE on the caller's own profiles row. We prove the underlying write the
-// action performs on the HAPPY path (set a non-null username, then change it)
-// still succeeds against the live test DB — i.e. the H19 guard does not regress
-// the legitimate path it is layered on top of.
-// ─────────────────────────────────────────────────────────────────────────────
-
-const LOCAL_UP = localStackRunning();
-const i = LOCAL_UP ? infra() : null;
-const dbReady = LOCAL_UP && !!i?.dbReady;
-
-describe("Batch 7 [H19 runtime]: legitimately setting/changing a username still writes (unaffected by the guard)", () => {
-  let host: SupabaseClient | null = null;
-  let hostId = "";
-
-  beforeAll(() => {
-    if (!dbReady || !i) return;
-    expect(i.hosts.length).toBeGreaterThanOrEqual(1);
-    host = hostClient(i.hosts[0]);
-    hostId = i.hosts[0].id;
-  });
-
-  afterAll(async () => {
-    // Leave the row clean for re-runs / other suites.
-    if (host && hostId) await host.from("profiles").update({ username: null }).eq("id", hostId);
-  });
-
-  it.skipIf(!dbReady)("setting a previously-empty username writes the non-null value", async () => {
-    if (!host) return;
-    const uname = "task7_h19_set";
-    // Clean slate via the host's own row (RLS allows own-row updates).
-    await host.from("profiles").update({ username: null }).eq("id", hostId);
-
-    const { data, error } = await host
-      .from("profiles")
-      .update({ username: uname })
-      .eq("id", hostId)
-      .select("username");
-    expect(error, "setting a username succeeds").toBeNull();
-    expect(data?.[0]?.username, "the non-null username is persisted").toBe(uname);
-  });
-
-  it.skipIf(!dbReady)("changing an existing username to another non-null value still goes through", async () => {
-    if (!host) return;
-    const next = "task7_h19_changed";
-    const { data, error } = await host
-      .from("profiles")
-      .update({ username: next })
-      .eq("id", hostId)
-      .select("username");
-    expect(error, "changing a username succeeds (no guard interference)").toBeNull();
-    expect(data?.[0]?.username, "the changed username is persisted").toBe(next);
   });
 });

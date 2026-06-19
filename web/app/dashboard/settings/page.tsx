@@ -17,7 +17,7 @@ export default async function SettingsPage() {
 
   const { data: profile, error } = await supabase
     .from("profiles")
-    .select("display_name, username, wechat_id")
+    .select("display_name, wechat_id, contact")
     .eq("id", user.id)
     .maybeSingle();
   // A fetch error must not collapse into blank defaults — that would render the
@@ -40,18 +40,13 @@ export default async function SettingsPage() {
       <main className="mx-auto w-full max-w-md flex-1 px-5 py-12 sm:px-8">
         <p className="eyebrow">{t("eyebrow")}</p>
         <h1 className="mt-2 font-display text-2xl font-extrabold text-paper">{t("title")}</h1>
-        <p className="mt-2 text-sm text-muted">
-          {t.rich("description", {
-            handle: (chunks) => <span className="font-mono text-paper">{chunks}</span>,
-            path: "/u/<username>",
-          })}
-        </p>
+        <p className="mt-2 text-sm text-muted">{t("description")}</p>
 
         <div className="mt-8">
           <ProfileForm
             initialDisplayName={profile?.display_name ?? ""}
-            initialUsername={profile?.username ?? ""}
             initialWechatId={profile?.wechat_id ?? ""}
+            initialContact={profile?.contact ?? ""}
           />
         </div>
       </main>

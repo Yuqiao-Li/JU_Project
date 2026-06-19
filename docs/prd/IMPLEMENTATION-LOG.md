@@ -10,8 +10,8 @@
 4. 局详情（改造 `EventClient`：局卡顶+留位，移 slot，保地址 reveal）— ✅ 完成
 5. 管理（改造 `[id]/page`：局卡+展开管理 / 满→提示成局 wiring）— ✅ 完成
 6. 仪表盘（局卡顶 + 一键复用 `/new?from=`）— ✅ 完成
-7. 设置（昵称合并 / host 通用联系方式 / 去 `/u/`）
-8. 发现（紧凑局卡 + 静默隐藏过滤）
+7. 设置（昵称合并 / host 通用联系方式 / 去 `/u/`）— ✅ 完成
+8. 发现（紧凑局卡 + 静默隐藏过滤）— ✅ 功能完成（过滤在 T1；紧凑局卡视觉→Step 10B）
 
 ## 进度记录
 ### 任务 1 — 迁移 0022 + RPC 基础　【✅ 完成 2026-06-19】
@@ -48,4 +48,23 @@
 - `new/page.tsx`：读 `?from=`（host 自有 RLS 读源局）→ cloneEventDefaults → 预填 EventForm（wechat 从 profile 补）；非 clone 路径不变。`dashboard/page.tsx`：顶部挂 EventCard(host hero，pickHeroEvent 选最近已发布局，额外读 capacity/locked_at/starts_at)；加"再开一局"→`/new?from=` + "管理"链接；原本地行组件 `EventCard`→ 重命名 `EventListRow`（避免与共享组件撞名，内部 going_count/isHost grep 仍命中）。
 - 测试：`task-step10a-clone.test.ts`（19 例纯单测，含防泄露 + 时间 bump + TBD；vitest 无 @/ alias 用 vi.mock 透传真 theme、stub 仅类型用的 event-form）。
 - 门禁：vitest **759/759**、护栏 **8/8**。
-- 任务 6 ✅ → 任务 7 进行中。
+
+### 任务 7 — 设置简化 + host 通用联系方式 + 删 /u/　【✅ 完成 2026-06-19】
+- `settings/profile-form.tsx`：去用户名输入 + 可用性检查 + H19 清空确认；单一"昵称"= display_name（必填）。加 `contact`（≤200，可选）。`actions.ts updateProfile`：不再写 username，写 `profiles.contact`（空→null，own-row scoped）。`page.tsx` 传 initialContact。
+- **删 /u/**：`git rm` `web/app/u/[username]/page.tsx`+`loading.tsx`；移除所有 /u/ 链接（hostedBy 本就纯文本；settings 描述改纯文本）。**保留**（闲置不删）：`get_public_events_by_host` RPC + read-public-events 助手 + `username` 列/唯一索引 + `/api/username-check` + `lib/profile/username.ts`。
+- 测试：移除 H19 用户名清空块 + focus-ring 用户名断言（功能已撤/字段已去）；retarget 到新设置契约（单昵称 + contact 持久化）；**保留安全套件** migration-0020（get_public_events / by_host）+ migration-0022（profiles.contact 双盲揭示）。
+- 门禁：vitest **757/757**、护栏 **8/8**。
+- 任务 7 ✅ → 任务 8。
+
+### 任务 8 — 发现：静默隐藏过滤（已于 T1 完成）+ 紧凑局卡（Step 10B）　【✅ 功能完成 2026-06-19】
+- **静默隐藏过滤已在任务 1 的 `get_public_events` 落地**（未成局-过期 = past + capacity + going<cap + locked_at 空 → 隐藏；migration-0022 安全套件覆盖）。发现页本就消费该 RPC，**无需新代码**。
+- **紧凑局卡（复用局卡组件紧凑变体）= Step 10B 视觉**；当前发现页继续用现有 public-event-card。本轮无新增代码。
+
+---
+
+## ✅ Step-10A 功能层全部完成（2026-06-19）
+- **已交付并合入 `prelaunch-fixes`**：任务 1–7（提交 `a6e4e14` / `8fde12a` / `ef8e7fa` / `075abf6` / `20dee86` / `8ea8089` / task7）；任务 8 功能在 T1。
+- **最终门禁**：vitest **757/757**、护栏 **8/8**（每任务均过）。
+- **⚠️ 待你（需终端批准）**：装二维码库 —— `pnpm --dir web add <qr 库>`，再把 `web/app/[slug]/opengraph-image.tsx` 的占位框换成对 `cardScanUrl` 的二维码渲染（`TODO(QR)` 标注处）。
+- **Step 10B（视觉，待品牌 PDF）**：局卡 art / 态过渡 / 分类局卡模板 / 选局卡 picker / 紧凑局卡变体 / PNG 布局。品牌 PDF 文本到位后回填各 PRD"品牌基调约束"。
+- **V2 / 缓做**（见 README §路线）：倒计时 / 出席邮戳 / 静默拉黑 / 邮箱认证 / Vibe Filter / 城市-邻里 等。

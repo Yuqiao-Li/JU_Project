@@ -7,9 +7,8 @@ import { describe, expect, it } from "vitest";
  * REGRESSION GUARD — wrapper-based fields must not paint a DOUBLED focus ring (#4).
  *
  * THE BUG:
- *   The username field (`profile-form.tsx`) and the date-time field
- *   (`date-time-field.tsx`) put an `<input>` INSIDE a container that already shows focus
- *   via `focus-within:border-iris`. The inner input ALSO matched the app-wide
+ *   A field that puts an `<input>` INSIDE a container which already shows focus via
+ *   `focus-within:border-iris` ALSO matched the app-wide
  *   `:focus-visible { outline: 2px solid iris; … }` rule in `globals.css`, so focusing
  *   the field painted a SECOND, offset ring INSIDE the bordered container.
  *
@@ -20,12 +19,19 @@ import { describe, expect, it } from "vitest";
  *   globals.css (`.focus-ring-off:focus-visible { outline: none }`) plus the
  *   `focus-ring-off` class on each wrapped input.
  *
+ * SCOPE NOTE (Step-10A task 7): the settings form's wrapped username field was the
+ * OTHER carrier of this pattern, but the public-username handle is retired (入口是局
+ * 不是人, §5) — that field, its wrapper, and its `focus-ring-off`/`focus-within`
+ * classes are gone. The settings nickname/contact inputs are now plain bordered
+ * inputs (no inner wrapper), so they can't double a ring and are not pinned here.
+ * The date-time field is the remaining wrapped-input carrier and is what this guard
+ * protects.
+ *
  * INVARIANT (pinned so neither the class nor the unlayered override regresses):
- *   1. the username `<input id="username">` className contains `focus-ring-off`.
- *   2. the date-time field's masked `<input>` className contains `focus-ring-off`.
- *   3. globals.css carries the UNLAYERED `.focus-ring-off:focus-visible { outline: none }`
+ *   1. the date-time field's masked `<input>` className contains `focus-ring-off`.
+ *   2. globals.css carries the UNLAYERED `.focus-ring-off:focus-visible { outline: none }`
  *      override (the thing that actually wins over the app-wide ring).
- *   4. both wrappers keep `focus-within:border-iris` (the single focus indicator).
+ *   3. the date-time wrapper keeps `focus-within:border-iris` (the single focus indicator).
  *
  * Pure SOURCE-GREP (Node `fs`, NO DB, NO React render), comment-stripped first so prose
  * naming these tokens can't self-trip the grep. NB: a source grep can't prove the CSS
@@ -54,15 +60,10 @@ function inputWith(code: string, attr: string): string {
   return code.slice(openIdx, closeIdx);
 }
 
-const PROFILE = stripComments(src("app/dashboard/settings/profile-form.tsx"));
 const PICKER = stripComments(src("components/events/date-time-field.tsx"));
 const GLOBALS = src("app/globals.css"); // CSS — no JS comments to strip
 
-describe("FOCUS-RING GUARD: wrapped fields show ONE focus indicator, not a doubled ring (#4)", () => {
-  it("the username <input id=\"username\"> opts out of the app-wide ring via focus-ring-off", () => {
-    expect(inputWith(PROFILE, 'id="username"').includes("focus-ring-off")).toBe(true);
-  });
-
+describe("FOCUS-RING GUARD: the wrapped date-time field shows ONE focus indicator, not a doubled ring (#4)", () => {
   it("the date-time field's masked <input> opts out of the app-wide ring via focus-ring-off", () => {
     // The masked text input carries the yyyy/mm/dd HH:mm placeholder.
     expect(inputWith(PICKER, 'placeholder="yyyy/mm/dd HH:mm"').includes("focus-ring-off")).toBe(true);
@@ -87,8 +88,7 @@ describe("FOCUS-RING GUARD: wrapped fields show ONE focus indicator, not a doubl
     }
   });
 
-  it("both wrappers keep focus-within:border-iris as the single focus indicator", () => {
-    expect(PROFILE.includes("focus-within:border-iris")).toBe(true);
+  it("the date-time wrapper keeps focus-within:border-iris as the single focus indicator", () => {
     expect(PICKER.includes("focus-within:border-iris")).toBe(true);
   });
 });

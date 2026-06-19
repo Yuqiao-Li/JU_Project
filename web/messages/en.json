@@ -247,8 +247,9 @@
     "backToEvents": "Back to events",
     "eyebrow": "Profile",
     "title": "Your details",
-    "description": "Your name shows on events you host. Your username is your public profile at <handle>{path}</handle>.",
+    "description": "Your nickname shows on events you host. Your WeChat and contact are shown to RSVP’d guests only after the event locks.",
     "nameLabel": "Name",
+    "nicknameLabel": "Nickname",
     "namePlaceholder": "Rain",
     "usernameLabel": "Username",
     "usernamePlaceholder": "rain",
@@ -264,7 +265,10 @@
     "saving": "Saving…",
     "wechatLabel": "WeChat ID",
     "wechatPlaceholder": "Your WeChat ID",
-    "wechatHint": "(shown to RSVP’d guests only after the event locks)"
+    "wechatHint": "(shown to RSVP’d guests only after the event locks)",
+    "contactLabel": "General contact",
+    "contactPlaceholder": "Email, phone, or other contact",
+    "contactHint": "(shown to RSVP’d guests only after the event locks)"
   },
   "eventPage": {
     "madeWith": "made with",

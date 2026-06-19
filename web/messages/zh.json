@@ -247,8 +247,9 @@
     "backToEvents": "返回活动",
     "eyebrow": "个人资料",
     "title": "你的信息",
-    "description": "你的名字会显示在你举办的活动上。你的用户名就是你的公开主页：<handle>{path}</handle>。",
+    "description": "你的昵称会显示在你举办的活动上。微信号和联系方式会在活动定档后才展示给已回复的客人。",
     "nameLabel": "名字",
+    "nicknameLabel": "昵称",
     "namePlaceholder": "小雨",
     "usernameLabel": "用户名",
     "usernamePlaceholder": "rain",
@@ -264,7 +265,10 @@
     "saving": "保存中……",
     "wechatLabel": "微信号",
     "wechatPlaceholder": "你的微信号",
-    "wechatHint": "（活动定档后才会展示给已回复的客人）"
+    "wechatHint": "（活动定档后才会展示给已回复的客人）",
+    "contactLabel": "通用联系方式",
+    "contactPlaceholder": "邮箱、电话或其他联系方式",
+    "contactHint": "（活动定档后才会展示给已回复的客人）"
   },
   "eventPage": {
     "madeWith": "用",

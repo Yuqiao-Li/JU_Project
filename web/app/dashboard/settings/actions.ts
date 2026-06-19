@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 
-import { displayNameSchema, usernameSchema } from "@/lib/profile/username";
+import { displayNameSchema } from "@/lib/profile/username";
 import { createClient } from "@/lib/supabase/server";
 
 export type ProfileFormState = {
@@ -11,15 +11,18 @@ export type ProfileFormState = {
 };
 
 /**
- * Update the signed-in host's profile (display name + public username).
+ * Update the signed-in host's profile (nickname + contacts).
+ *
+ * Step-10A task 7: the public-username handle is retired (入口是局不是人, §5).
+ * The single name field IS the nickname (display_name); the profiles.username
+ * column is KEPT in the DB (existing values untouched) but no longer surfaced
+ * or edited here. WeChat + general contact are host-owned and revealed to guests
+ * only after the event finalizes (double-blind, via get_event_by_slug).
  *
  * Hard rules (CLAUDE.md / TASKS 2.1):
  *  - The client NEVER sends profiles.id. We scope the UPDATE to `auth.uid()`
  *    server-side; RLS (id = auth.uid()) is the real guard. No upsert/insert —
  *    the row already exists from the auth.users trigger.
- *  - Username uniqueness is the DB index's job. The advisory UI check is only a
- *    hint; the authoritative answer is this write's unique-violation (23505),
- *    which we surface as a friendly message.
  */
 export async function updateProfile(
   _prev: ProfileFormState,
@@ -37,32 +40,6 @@ export async function updateProfile(
     return { status: "error", message: displayName.error.issues[0]?.message ?? "Check your name." };
   }
 
-  const rawUsername = String(formData.get("username") ?? "").trim();
-  let username: string | null = null;
-  if (rawUsername.length > 0) {
-    const parsed = usernameSchema.safeParse(rawUsername);
-    if (!parsed.success) {
-      return { status: "error", message: parsed.error.issues[0]?.message ?? "Check your username." };
-    }
-    username = parsed.data;
-  } else {
-    // Clearing the username deletes the public /u/<handle> and 404s every shared
-    // link, so it must be an explicit, confirmed choice — never a silent side
-    // effect of an empty field. The client sends `confirm_clear` only after the
-    // host confirms; without it (and only when they actually had a username) we
-    // block the write and report it so the field state isn't lost (H19).
-    const hadUsername = await supabase
-      .from("profiles")
-      .select("username")
-      .eq("id", user.id)
-      .maybeSingle();
-    const previous = hadUsername.data?.username ?? null;
-    const confirmed = String(formData.get("confirm_clear") ?? "") === "true";
-    if (previous && !confirmed) {
-      return { status: "error", message: "USERNAME_CLEAR_UNCONFIRMED" };
-    }
-  }
-
   // WeChat (round-4) — optional, managed here independently of event creation. Empty
   // clears it; bounded length, trimmed. Single source of truth = the profile.
   const rawWechat = String(formData.get("wechat_id") ?? "").trim();
@@ -71,17 +48,24 @@ export async function updateProfile(
   }
   const wechatId: string | null = rawWechat.length > 0 ? rawWechat : null;
 
+  // General contact (Step-10A) — optional, host-owned. Mirrors wechat_id: empty clears
+  // it, bounded + trimmed. Guest-facing reveal is double-blind (only after the event
+  // finalizes, through get_event_by_slug) — nothing identity/auth-bearing here.
+  const rawContact = String(formData.get("contact") ?? "").trim();
+  if (rawContact.length > 200) {
+    return { status: "error", message: "That contact is a bit long." };
+  }
+  const contact: string | null = rawContact.length > 0 ? rawContact : null;
+
   // UPDATE scoped to the caller's own row. id comes from auth.uid(), never the
-  // client; RLS enforces it regardless.
+  // client; RLS enforces it regardless. username is intentionally NOT written here —
+  // the column is kept but no longer edited (Step-10A task 7).
   const { error } = await supabase
     .from("profiles")
-    .update({ display_name: displayName.data, username, wechat_id: wechatId })
+    .update({ display_name: displayName.data, wechat_id: wechatId, contact })
     .eq("id", user.id);
 
   if (error) {
-    if (error.code === "23505") {
-      return { status: "error", message: "That username is taken. Try another." };
-    }
     return { status: "error", message: "Couldn't save your profile. Try again." };
   }
 
