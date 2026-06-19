@@ -21,5 +21,10 @@
 ## 品牌基调约束
 待 PDF：发现页调性（克制、工具感、非广场）。
 
+## 实现逻辑（Step-10A 设计）
+- **紧凑局卡** = 复用局卡组件（紧凑变体）。
+- ⚠️ **成局/未成局不能用 is_locked 判**（R4 自动锁让临近开始的局都 is_locked）；"成局" = 凑满(going≥capacity) OR host 手动锁(`locked_at` 非空)，自动锁不算。
+- **静默隐藏** = 未成局（过期 + 设了 capacity + going<capacity + `locked_at` 空）→ `get_public_events` 加一条 WHERE 隐藏；host 仍 dashboard 可见可复用。开放局不受限。
+
 ## 状态
-功能范围已定（Step 10A）。紧凑局卡 + 静默隐藏过滤 未开始。
+功能范围 + 实现逻辑已定（Step 10A）。紧凑局卡 + 静默隐藏过滤 未开始。

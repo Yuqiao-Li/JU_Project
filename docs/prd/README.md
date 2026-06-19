@@ -32,6 +32,16 @@
 - **静默隐藏**：到点仍未成局 → 自动从公开列表隐藏；host 仍可见、可一键复用。
 - **信任/安全（§6）**：双盲✅(R4) · 阅后即焚✅(R4) · 随录 profile✅ · 静默拉黑=V2 · 邮箱认证=V2。
 
+## 实现逻辑（Step-10A 设计 · 跨页）
+> 各页实现细节见对应 PRD 的"实现逻辑"节。这里是跨页 wiring + 迁移 + 任务大纲。
+- **⚠️ 成局 ≠ 锁定**：R4 自动锁让临近开始的局都 `is_locked`；**"成局" = 凑满(going≥capacity) OR host 手动锁(`locked_at` 非空)，自动锁(纯到时)不算**。联系方式解锁用 `is_locked`(R4)；静默隐藏用"成局"判定。
+- **成局触发"满→提示 host"**：`going ≥ capacity` 且 `locked_at` 空 → host 局卡态2/管理显示"确认成局？"→ 调 `lock_event`(R4)。满前=候补、成局后=停新 RSVP（均 R4）。无新后端。
+- **会出现轻提示**：成局后 局卡态2/局详情显示"🎉成局了，去加微信群"。
+- **迁移 0022（附加，下一个迁移号）**：`events.category` + `events.card_variant` + `profiles.contact`；recreate `get_event_by_slug`（成局后补返回 category/card_variant/host 联系方式）、`get_public_events`（加静默隐藏 WHERE）。
+- **新件**：局卡共享组件（角色感知、两态）；`next/og` 局卡图片路由（嵌 QR、兼 OG）；QR 生成库。
+- **任务大纲（建议顺序）**：① 迁移 0022 + RPC 边界测试 → ② 局卡组件 + 图片路由 + QR → ③ 建局(选局卡/成局目标/校验) → ④ 局详情(改 `EventClient`) → ⑤ 管理(改 `[id]/page` + 满→提示成局) → ⑥ 仪表盘(局卡顶 + 一键复用) → ⑦ 设置(昵称/contact/去 /u/) → ⑧ 发现(紧凑卡 + 静默隐藏)。视觉件=Step 10B。
+- **测试**：分层 —— 页面/组件轻量单元 + 安全门控(双盲/锁定/微信/静默隐藏 的 RPC)保留 RPC 边界测试 + 全量门禁（vitest + check-boundaries，绝不接 `| tail`）。
+
 ## PRD 文件索引
 | 文件 | 页 / 组件 |
 |---|---|

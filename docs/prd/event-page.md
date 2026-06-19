@@ -23,5 +23,9 @@
 ## 品牌基调约束
 待 PDF：留位文案语气、个人化局卡的成局/票根措辞。
 
+## 实现逻辑（Step-10A 设计）
+- **改造现有 `EventClient`**：保留全部数据管线（SSR seed + token + 轮询 + `fetchSnapshot` + `handleSubmitted` + `viewerIsHost` + `ended`）；呈现换成 **局卡(态2)顶 + 留位表单下**；移除 名单/评论/投票 三 slot（缓做、代码保留）；成局后地址 reveal 保留。
+- `handleSubmitted` 的"提交→重读解锁"即"填完→整页变个人化局卡"。
+
 ## 状态
-功能范围已定（Step 10A）。R4 已落 DB 层（微信/锁定/双向解锁/阅后即焚）；局卡中心化 UI 未开始。
+功能范围 + 实现逻辑已定（Step 10A）。R4 已落 DB 层（微信/锁定/双向解锁/阅后即焚）；局卡中心化 UI 未开始。

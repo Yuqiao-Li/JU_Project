@@ -25,5 +25,12 @@ RSVP 收集开关、Chip-in 收款链接、公开/私密、密码保护、主办
 ## 品牌基调约束
 待 PDF：建局文案语气（黑话占位）、分类命名调性、局卡模板风格。
 
+## 实现逻辑（Step-10A 设计）
+- **成局目标"缺X人"** = 复用 `events.capacity`（`lib/events/capacity.ts` 的 `remainingSpots`/`spotsLeftLabel` 已是现成逻辑；满=remaining 0；留空=开放局）。零新字段。
+- **分类** = 新增 `events.category`（代码配置列表，仿 `theme.ts` 预设；占位值待 Step 10B）；**可选**，留空→默认局卡。
+- **选局卡** = `events.category` + `events.card_variant`（选中款）；旧 cover/theme/effect 列保留但 MVP 不设。"外观段"UI → "选局卡"（category 可选 + variant 选择，卡预览=Step 10B）。
+- **发布校验**（`parseEventForm`/发布路径）加：时间(或 TBD) + 城市必填。
+- 新列走附加迁移 **0022**。
+
 ## 状态
-功能范围已定（Step 10A）。实现未开始。
+功能范围 + 实现逻辑已定（Step 10A）。代码实现未开始。
