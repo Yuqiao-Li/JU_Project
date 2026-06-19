@@ -71,6 +71,7 @@ export async function POST(
     plus_ones: input.plus_ones,
     contact: input.contact ?? undefined,
     client_fingerprint: fingerprint,
+    wechat_id: input.wechat_id ?? undefined,
   });
 
   if (error) {
@@ -96,6 +97,20 @@ export async function POST(
       return NextResponse.json(
         { ok: false, error: "cancelled", message: "This event was cancelled." },
         { status: 409 },
+      );
+    }
+    // Round-4: locking finalizes the event and closes new RSVPs.
+    if (msg.includes("locked")) {
+      return NextResponse.json(
+        { ok: false, error: "locked", message: "RSVPs closed — this event is locked." },
+        { status: 409 },
+      );
+    }
+    // Round-4: going/maybe require a WeChat so the host can reach the guest on lock.
+    if (msg.includes("wechat")) {
+      return NextResponse.json(
+        { ok: false, error: "wechat_required", message: "Add your WeChat so the host can reach you." },
+        { status: 400 },
       );
     }
     // Anything else: a generic failure, without echoing raw DB text to the client.

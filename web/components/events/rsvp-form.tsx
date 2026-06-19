@@ -47,7 +47,13 @@ interface RsvpFormProps {
   initial: RsvpRecord | null;
   onSubmitted: (
     result: RsvpResult,
-    input: { display_name: string; status: RsvpStatus; plus_ones: number; contact: string | null },
+    input: {
+      display_name: string;
+      status: RsvpStatus;
+      plus_ones: number;
+      contact: string | null;
+      wechat_id: string | null;
+    },
   ) => void;
 }
 
@@ -66,6 +72,7 @@ export function RsvpForm({
   const [status, setStatus] = useState<RsvpStatus>(coerceStatus(initial?.status));
   const [plusOnes, setPlusOnes] = useState(initial?.plus_ones ?? 0);
   const [contact, setContact] = useState(initial?.contact ?? "");
+  const [wechat, setWechat] = useState(initial?.wechat_id ?? "");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [confirmed, setConfirmed] = useState<RsvpResult | null>(null);
@@ -82,6 +89,7 @@ export function RsvpForm({
       setStatus(coerceStatus(initial.status));
       setPlusOnes(initial.plus_ones);
       setContact(initial.contact ?? "");
+      setWechat(initial.wechat_id ?? "");
     }
   }, [initial]);
 
@@ -99,11 +107,20 @@ export function RsvpForm({
     if (busy) return;
     setError(null);
 
+    const wechatTrimmed = wechat.trim();
+    // WeChat is required when actually attending (going/maybe) — it's how the host
+    // reaches the guest once the event locks. The DB enforces this too; fail fast here.
+    if ((status === "going" || status === "maybe") && wechatTrimmed === "") {
+      setError(t("wechatRequired"));
+      return;
+    }
+
     const candidate = {
       display_name: name,
       status,
       plus_ones: allowPlusOnes ? plusOnes : 0,
       contact: contact.trim() ? contact.trim() : null,
+      wechat_id: wechatTrimmed ? wechatTrimmed : null,
       guest_token: initial?.token ?? null,
     };
     const parsed = rsvpInputSchema.safeParse(candidate);
@@ -148,6 +165,7 @@ export function RsvpForm({
         status,
         plus_ones: parsed.data.plus_ones,
         contact: parsed.data.contact ?? null,
+        wechat_id: parsed.data.wechat_id ?? null,
       });
     } catch {
       setError(t("errorNetwork"));
@@ -263,6 +281,30 @@ export function RsvpForm({
             className="mt-1.5 h-11 w-full rounded-xl border border-line bg-ink/40 px-3.5 text-paper placeholder:text-muted/60 focus-visible:border-iris"
           />
         </div>
+
+        {/* WeChat — required when attending (going/maybe). Revealed to the host only
+            after the event locks (round-4); the DB enforces required-ness too. */}
+        {(status === "going" || status === "maybe") && (
+          <div>
+            <label htmlFor="rsvp-wechat" className="block text-sm font-medium text-paper">
+              {t("wechatLabel")}
+            </label>
+            <input
+              id="rsvp-wechat"
+              name="wechat_id"
+              type="text"
+              autoComplete="off"
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
+              value={wechat}
+              onChange={(e) => setWechat(e.target.value)}
+              maxLength={100}
+              placeholder={t("wechatPlaceholder")}
+              className="mt-1.5 h-11 w-full rounded-xl border border-line bg-ink/40 px-3.5 text-paper placeholder:text-muted/60 focus-visible:border-iris"
+            />
+          </div>
+        )}
 
         {error && (
           <p role="alert" className="text-sm text-coral">

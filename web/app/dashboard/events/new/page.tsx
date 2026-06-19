@@ -19,6 +19,13 @@ export default async function NewEventPage() {
   } = await supabase.auth.getUser();
   if (!user) redirect("/login?next=/dashboard/events/new");
 
+  // Prefill the host's WeChat from their profile (single source of truth, round-4).
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("wechat_id")
+    .eq("id", user.id)
+    .maybeSingle();
+
   const t = await getTranslations("eventForm");
 
   return (
@@ -33,7 +40,7 @@ export default async function NewEventPage() {
       <p className="mt-3 text-muted">{t("newSubhead")}</p>
 
       <div className="mt-10">
-        <EventForm mode="create" />
+        <EventForm mode="create" hostWechatId={profile?.wechat_id ?? ""} />
       </div>
     </div>
   );

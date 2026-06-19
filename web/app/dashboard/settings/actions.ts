@@ -63,11 +63,19 @@ export async function updateProfile(
     }
   }
 
+  // WeChat (round-4) — optional, managed here independently of event creation. Empty
+  // clears it; bounded length, trimmed. Single source of truth = the profile.
+  const rawWechat = String(formData.get("wechat_id") ?? "").trim();
+  if (rawWechat.length > 100) {
+    return { status: "error", message: "That WeChat ID is a bit long." };
+  }
+  const wechatId: string | null = rawWechat.length > 0 ? rawWechat : null;
+
   // UPDATE scoped to the caller's own row. id comes from auth.uid(), never the
   // client; RLS enforces it regardless.
   const { error } = await supabase
     .from("profiles")
-    .update({ display_name: displayName.data, username })
+    .update({ display_name: displayName.data, username, wechat_id: wechatId })
     .eq("id", user.id);
 
   if (error) {

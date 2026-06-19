@@ -188,6 +188,7 @@ describe("task 1.5b [SECURITY]: submit_rsvp guest write path (TEST-SPEC §1.5b)"
       plus_ones?: number;
       contact?: string;
       client_fingerprint?: string;
+      wechat_id?: string;
     },
   ): Promise<{ res: ApiResult; data: Submit | null }> {
     const body: Record<string, unknown> = {
@@ -199,6 +200,15 @@ describe("task 1.5b [SECURITY]: submit_rsvp guest write path (TEST-SPEC §1.5b)"
     if (args.plus_ones !== undefined) body.plus_ones = args.plus_ones;
     if (args.contact !== undefined) body.contact = args.contact;
     if (args.client_fingerprint !== undefined) body.client_fingerprint = args.client_fingerprint;
+    if (args.wechat_id !== undefined) body.wechat_id = args.wechat_id;
+    // round-4: submit_rsvp now REQUIRES wechat_id for going/maybe. These §1.5b dedup/
+    // capacity/rate-limit tests predate that gate and aren't about wechat, so default-
+    // inject one for attending intents (callers may still override / clear it) so the
+    // ORIGINAL intent of each case survives instead of tripping the new requirement.
+    const status = (args.status ?? "going").toLowerCase().trim();
+    if ((status === "going" || status === "maybe") && body.wechat_id === undefined) {
+      body.wechat_id = `${args.display_name}-wx`;
+    }
     const res = (await client.rpc(FN, body)) as ApiResult;
     return { res, data: (res.data as Submit) ?? null };
   }
@@ -211,6 +221,11 @@ describe("task 1.5b [SECURITY]: submit_rsvp guest write path (TEST-SPEC §1.5b)"
 
     // Signature is pinned (SCHEMA RPC table). The independent test relies on these
     // exact arg names for its .rpc bodies; a rename/reorder is itself a contract break.
+    // round-4: submit_rsvp gained `wechat_id` as the LAST arg (migration 0021). The
+    // pinned signature is updated accordingly; everything below still exercises the
+    // ORIGINAL §1.5b dedup/capacity/rate-limit intents — wechat is supplied for
+    // going/maybe by the callSubmit helper so the new required-for-attending gate
+    // doesn't masquerade as a §1.5b failure.
     expect(inArgNames(FN), "submit_rsvp signature is pinned").toEqual([
       "slug",
       "display_name",
@@ -219,6 +234,7 @@ describe("task 1.5b [SECURITY]: submit_rsvp guest write path (TEST-SPEC §1.5b)"
       "plus_ones",
       "contact",
       "client_fingerprint",
+      "wechat_id",
     ]);
 
     // Idempotent reset (slug is UNIQUE — a stale row would break the insert).

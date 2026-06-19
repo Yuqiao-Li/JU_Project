@@ -41,6 +41,13 @@ export default async function EditEventPage({
 
   if (!event) notFound();
 
+  // Host WeChat lives on the profile (single source of truth, round-4) — prefill it.
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("wechat_id")
+    .eq("id", user.id)
+    .maybeSingle();
+
   const t = await getTranslations("eventForm");
 
   // Date poll (task 5.1): read the candidate dates + live tally through the host's own
@@ -74,6 +81,7 @@ export default async function EditEventPage({
     effect: event.effect ?? "none",
     chipInUrl: event.chip_in_url ?? "",
     chipInNote: event.chip_in_note ?? "",
+    wechatId: profile?.wechat_id ?? "",
   };
 
   return (

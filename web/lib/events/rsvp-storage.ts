@@ -22,6 +22,12 @@ export interface RsvpRecord {
   plus_ones: number;
   display_name: string;
   contact: string | null;
+  /**
+   * Round-4: the guest's WeChat, cached so a return visit prefills it. Optional so a
+   * record written before this field existed (or by a caller that doesn't set it) still
+   * parses — `loadRsvpRecord` normalizes a missing value to null.
+   */
+  wechat_id?: string | null;
 }
 
 const PREFIX = "partiful:rsvp:";
@@ -50,6 +56,7 @@ export function loadRsvpRecord(slug: string): RsvpRecord | null {
         plus_ones: typeof r.plus_ones === "number" ? r.plus_ones : 0,
         display_name: typeof r.display_name === "string" ? r.display_name : "",
         contact: typeof r.contact === "string" ? r.contact : null,
+        wechat_id: typeof r.wechat_id === "string" ? r.wechat_id : null,
       };
     }
   } catch {

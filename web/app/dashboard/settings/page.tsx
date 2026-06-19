@@ -17,7 +17,7 @@ export default async function SettingsPage() {
 
   const { data: profile, error } = await supabase
     .from("profiles")
-    .select("display_name, username")
+    .select("display_name, username, wechat_id")
     .eq("id", user.id)
     .maybeSingle();
   // A fetch error must not collapse into blank defaults — that would render the
@@ -51,6 +51,7 @@ export default async function SettingsPage() {
           <ProfileForm
             initialDisplayName={profile?.display_name ?? ""}
             initialUsername={profile?.username ?? ""}
+            initialWechatId={profile?.wechat_id ?? ""}
           />
         </div>
       </main>

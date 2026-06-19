@@ -3,12 +3,15 @@ import { notFound, redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 
 import { CopyLinkButton } from "@/components/events/copy-link-button";
+import { CopyText } from "@/components/events/copy-text";
 import { LocalWhen } from "@/components/events/local-when";
 import { goingOccupancy, remainingSpots } from "@/lib/events/capacity";
+import { isEventLocked } from "@/lib/events/lock";
 import { createClient } from "@/lib/supabase/server";
 
 import { CopyContactsButton, type GuestContact } from "./copy-contacts-button";
 import { EventLifecycle } from "./event-lifecycle";
+import { LockEventButton } from "./lock-event-button";
 import { PromoteButton } from "./promote-button";
 
 /**
@@ -31,6 +34,24 @@ type RsvpRow = {
 
 type Translator = Awaited<ReturnType<typeof getTranslations>>;
 
+/** A guest's unlocked contact, as returned by get_event_guest_contacts (round-4). */
+type GuestContactRow = { display_name: string; wechat_id: string };
+
+/** Parse the JSON array get_event_guest_contacts returns; drop anything malformed. */
+function parseGuestContacts(data: unknown): GuestContactRow[] {
+  if (!Array.isArray(data)) return [];
+  const rows: GuestContactRow[] = [];
+  for (const entry of data) {
+    if (entry && typeof entry === "object") {
+      const e = entry as Record<string, unknown>;
+      const name = typeof e.display_name === "string" ? e.display_name : "";
+      const wechat = typeof e.wechat_id === "string" ? e.wechat_id : "";
+      if (wechat) rows.push({ display_name: name, wechat_id: wechat });
+    }
+  }
+  return rows;
+}
+
 const STATUS_LABEL_KEYS: Record<string, string> = {
   going: "statusGoing",
   maybe: "statusMaybe",
@@ -51,10 +72,26 @@ export default async function HostEventDetailPage({ params }: { params: Promise<
 
   const { data: event } = await supabase
     .from("events")
-    .select("id, slug, title, status, visibility, starts_at, date_tbd, capacity")
+    .select("id, slug, title, status, visibility, starts_at, date_tbd, capacity, locked_at")
     .eq("id", id)
     .maybeSingle();
   if (!event) notFound();
+
+  // Round-4: a locked (finalized) event closes new RSVPs and opens the two-way WeChat
+  // reveal. Mirrors the DB helper exactly (manual lock or within 1 day of start).
+  const locked = isEventLocked(event.locked_at, event.starts_at);
+
+  // Guest WeChat is locked-only and only readable through the gated DEFINER RPC — the
+  // direct roster read CANNOT pull it (column revoke, migration 0021). Fetch it only
+  // when locked; the RPC re-checks ownership + the lock/burn window and returns [] when
+  // the window is closed (burned).
+  let guestContacts: GuestContactRow[] = [];
+  if (locked) {
+    const { data: contactsData } = await supabase.rpc("get_event_guest_contacts", {
+      event_id: event.id,
+    });
+    guestContacts = parseGuestContacts(contactsData);
+  }
 
   // Full guest list over the host RLS path — contact rides along (host-only, M1).
   const { data: rsvpData } = await supabase
@@ -94,6 +131,11 @@ export default async function HostEventDetailPage({ params }: { params: Promise<
         {event.visibility === "private" && (
           <span className="rounded-full border border-line px-2.5 py-0.5 text-xs text-muted">{t("private")}</span>
         )}
+        {locked && (
+          <span className="rounded-full border border-iris/40 bg-iris/10 px-2.5 py-0.5 text-xs text-iris">
+            {t("lockedBadge")}
+          </span>
+        )}
       </div>
       <h1 className="mt-2 text-balance font-display text-3xl font-extrabold text-paper">{event.title}</h1>
       <p className="mt-2 text-muted">
@@ -115,6 +157,12 @@ export default async function HostEventDetailPage({ params }: { params: Promise<
       <div className="mt-3">
         <EventLifecycle eventId={event.id} status={event.status} />
       </div>
+
+      {event.status === "published" && !locked && (
+        <div className="mt-3">
+          <LockEventButton eventId={event.id} />
+        </div>
+      )}
 
       <section className="mt-8 rounded-2xl border border-line bg-surface/60 p-5">
         <p className="text-sm text-muted">{t("publicLinkHint")}</p>
@@ -162,6 +210,27 @@ export default async function HostEventDetailPage({ params }: { params: Promise<
           </div>
         )}
       </section>
+
+      {locked && (
+        <section className="mt-10">
+          <h2 className="eyebrow">{t("contactsHeading")}</h2>
+          {guestContacts.length === 0 ? (
+            <p className="mt-3 text-sm text-muted">{t("contactsClosed")}</p>
+          ) : (
+            <ul className="mt-4 divide-y divide-line/60 rounded-xl border border-line bg-surface/40">
+              {guestContacts.map((c, i) => (
+                <li key={`${c.wechat_id}-${i}`} className="flex items-center justify-between gap-3 px-4 py-3">
+                  <div className="min-w-0">
+                    <p className="truncate text-paper">{c.display_name || t("guestFallback")}</p>
+                    <p className="truncate font-mono text-sm text-muted">{c.wechat_id}</p>
+                  </div>
+                  <CopyText value={c.wechat_id} />
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      )}
 
       {waitlist.length > 0 && (
         <section className="mt-10">

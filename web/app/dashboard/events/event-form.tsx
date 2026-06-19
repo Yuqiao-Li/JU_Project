@@ -33,6 +33,7 @@ export type EventDefaults = {
   effect: string;
   chipInUrl: string;
   chipInNote: string;
+  wechatId: string;
 };
 
 const BLANK: EventDefaults = {
@@ -57,6 +58,7 @@ const BLANK: EventDefaults = {
   effect: "none",
   chipInUrl: "",
   chipInNote: "",
+  wechatId: "",
 };
 
 const inputClass =
@@ -72,9 +74,18 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
  * on edit (keep / set / clear); the hash is never sent to the client, so the
  * input only ever carries a new plaintext, hashed server-side.
  */
-export function EventForm({ mode, defaults }: { mode: "create" | "edit"; defaults?: EventDefaults }) {
+export function EventForm({
+  mode,
+  defaults,
+  hostWechatId,
+}: {
+  mode: "create" | "edit";
+  defaults?: EventDefaults;
+  /** Prefill for the host WeChat on create (from the profile), where there's no event yet. */
+  hostWechatId?: string;
+}) {
   const t = useTranslations("eventForm");
-  const d = defaults ?? BLANK;
+  const d = defaults ?? { ...BLANK, wechatId: hostWechatId ?? "" };
   const action = mode === "create" ? createEvent : updateEvent;
   const [state, formAction, pending] = useActionState(action, INITIAL);
 
@@ -126,6 +137,30 @@ export function EventForm({ mode, defaults }: { mode: "create" | "edit"; default
             placeholder={t("descriptionPlaceholder")}
             className="w-full rounded-xl border border-line bg-surface-2 px-4 py-3 text-paper placeholder:text-muted/60 focus:border-iris focus:outline-none"
           />
+        </div>
+      </section>
+
+      {/* Host contact — your WeChat, revealed to guests only after the event locks */}
+      <section className="flex flex-col gap-5">
+        <SectionLabel>{t("sectionHostContact")}</SectionLabel>
+        <div className="flex flex-col gap-2">
+          <label htmlFor="wechat_id" className="text-sm text-muted">
+            {t("wechatLabel")}
+          </label>
+          <input
+            id="wechat_id"
+            name="wechat_id"
+            type="text"
+            required
+            maxLength={100}
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
+            defaultValue={d.wechatId}
+            placeholder={t("wechatPlaceholder")}
+            className={inputClass}
+          />
+          <p className="text-xs text-muted">{t("wechatHint")}</p>
         </div>
       </section>
 

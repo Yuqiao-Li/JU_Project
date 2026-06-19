@@ -169,7 +169,11 @@
     "uploading": "Uploading…",
     "replaceCover": "Replace cover",
     "uploadCover": "Upload cover",
-    "remove": "Remove"
+    "remove": "Remove",
+    "sectionHostContact": "Your contact",
+    "wechatLabel": "Your WeChat",
+    "wechatPlaceholder": "Your WeChat ID",
+    "wechatHint": "Guests see this only after the event locks."
   },
   "hostEvent": {
     "backToEvents": "← Your events",
@@ -207,7 +211,20 @@
     "previewAsGuest": "Preview as guest",
     "draftLinkHint": "This event is still a draft — the link only works for guests after you publish.",
     "copyContacts": "Copy all contacts ({count})",
-    "copyContactsCopied": "Copied"
+    "copyContactsCopied": "Copied",
+    "lockEvent": "Lock event",
+    "lockConfirmHeading": "Lock this event?",
+    "lockConfirmIrreversible": "This can’t be undone.",
+    "lockConfirmReveal": "Both sides’ WeChat opens up — RSVP’d guests see yours, and you see theirs.",
+    "lockConfirmStops": "New RSVPs will stop.",
+    "lockConfirm": "Confirm lock",
+    "lockCancel": "Not yet",
+    "lockedBadge": "Locked",
+    "contactsHeading": "Contacts unlocked",
+    "contactsClosed": "The contacts window is closed.",
+    "contactsCopy": "Copy",
+    "contactsCopied": "Copied",
+    "lockFailed": "Couldn’t lock the event. Try again."
   },
   "settings": {
     "backToEvents": "Back to events",
@@ -227,7 +244,10 @@
     "usernameClearConfirm": "Yes, remove my public profile and break those links.",
     "usernameClearBlocked": "Confirm you want to remove your public profile before saving.",
     "save": "Save profile",
-    "saving": "Saving…"
+    "saving": "Saving…",
+    "wechatLabel": "WeChat ID",
+    "wechatPlaceholder": "Your WeChat ID",
+    "wechatHint": "(shown to RSVP’d guests only after the event locks)"
   },
   "eventPage": {
     "madeWith": "made with",
@@ -245,7 +265,14 @@
     "endedBanner": "This event has ended",
     "unlockLoading": "Loading the details…",
     "unlockFailed": "Couldn’t load the event details.",
-    "unlockRetry": "Refresh to see the details"
+    "unlockRetry": "Refresh to see the details",
+    "lockedBanner": "This event is locked in",
+    "lockedRsvpClosed": "RSVPs are closed — this event is locked.",
+    "ticketHeading": "Your digital stub",
+    "ticketHostWechat": "Host’s WeChat",
+    "ticketHint": "Contact details hide automatically 24h after the event.",
+    "copyButton": "Copy",
+    "copiedButton": "Copied"
   },
   "rsvp": {
     "eyebrow": "RSVP",
@@ -278,7 +305,10 @@
     "confirmMaybe": "Marked as maybe — change it anytime below.",
     "confirmNotGoing": "Got it — you’re not going. You can change your mind below.",
     "confirmDefault": "Your reply is saved. Update it anytime below.",
-    "addToCalendar": "Add to calendar"
+    "addToCalendar": "Add to calendar",
+    "wechatLabel": "Your WeChat",
+    "wechatPlaceholder": "So the host can reach you after it locks",
+    "wechatRequired": "Add your WeChat so the host can reach you."
   },
   "feed": {
     "whosComing": "Who’s coming",

@@ -394,7 +394,7 @@ describe("task 1.3 [SECURITY]: RLS host isolation + positive self-read + 🟡 de
   });
 
   // ── 更狠边界 (1): DB-authoritative GRANT shape ───────────────────────────────
-  it.skipIf(!LOCAL_UP)("grants (DB-authoritative): anon has no SELECT/DML; authenticated is SELECT-only on child tables, full CRUD only on events; rate_limits denied to all", () => {
+  it.skipIf(!LOCAL_UP)("grants (DB-authoritative): anon has no SELECT/DML; authenticated SELECT-only on child tables (guests column-scoped, no wechat_id), CRUD on events with UPDATE column-scoped (no locked_at); rate_limits denied to all", () => {
     // NOTE: only data privileges (SELECT/INSERT/UPDATE/DELETE) are in scope.
     // REFERENCES/TRIGGER/TRUNCATE are Supabase platform defaults unreachable via
     // the Data API and are not what task 1.3 controls.
@@ -422,24 +422,44 @@ describe("task 1.3 [SECURITY]: RLS host isolation + positive self-read + 🟡 de
     expect(overGrant, "authenticated must be SELECT-only on child/🟡 tables").toEqual([]);
 
     // authenticated: MUST hold SELECT on each host-readable table (else the host
-    // dashboard policy is inert — the very bug 1.3's grants exist to fix).
+    // dashboard policy is inert — the very bug 1.3's grants exist to fix). `guests`
+    // is EXCLUDED here: round-4 (0021) hardened it to COLUMN-level SELECT (every column
+    // EXCEPT wechat_id), so it has no TABLE-level SELECT — asserted explicitly below.
     const missingSelect = lines(
       runSql(
         `select 'MISS:'||t
-           from unnest(array['events','guests','rsvps','comments','date_options','date_votes','answers','questions','comment_reactions','event_photos','scheduled_reminders','broadcasts','event_hosts','profiles']) t
+           from unnest(array['events','rsvps','comments','date_options','date_votes','answers','questions','comment_reactions','event_photos','scheduled_reminders','broadcasts','event_hosts','profiles']) t
           where not has_table_privilege('authenticated','public.'||t,'SELECT');`,
       ),
     );
     expect(missingSelect, "authenticated must hold SELECT on every host-readable table").toEqual([]);
 
-    // events: the one entity a host writes directly — full CRUD for authenticated.
+    // guests: SELECT is COLUMN-level (round-4 locked-only contact hardening, 0021).
+    // The host CAN still read the roster columns, but NOT wechat_id off the table —
+    // guest wechat is reachable only via the gated DEFINER RPC get_event_guest_contacts.
+    expect(scalar(runSql(`select has_column_privilege('authenticated','public.guests','display_name','SELECT');`)),
+      "host keeps SELECT on guests.display_name (roster read)").toBe("t");
+    expect(scalar(runSql(`select has_column_privilege('authenticated','public.guests','contact','SELECT');`)),
+      "host keeps SELECT on guests.contact (legacy host-visible metadata)").toBe("t");
+    expect(scalar(runSql(`select has_column_privilege('authenticated','public.guests','wechat_id','SELECT');`)),
+      "guests.wechat_id must NOT be directly selectable by authenticated (locked-only; RPC-gated)").toBe("f");
+
+    // events: host writes directly, but UPDATE is COLUMN-level (round-4 irreversibility
+    // hardening, 0021) — every column EXCEPT locked_at. SELECT/INSERT/DELETE stay
+    // table-wide; locked_at is writable only by lock_event (DEFINER), never directly.
     const eventsMissing = lines(
       runSql(
-        `select 'EVT:'||p from unnest(array['SELECT','INSERT','UPDATE','DELETE']) p
+        `select 'EVT:'||p from unnest(array['SELECT','INSERT','DELETE']) p
           where not has_table_privilege('authenticated','public.events', p);`,
       ),
     );
-    expect(eventsMissing, "authenticated needs full CRUD on events").toEqual([]);
+    expect(eventsMissing, "authenticated needs table-level SELECT/INSERT/DELETE on events").toEqual([]);
+    expect(scalar(runSql(`select has_column_privilege('authenticated','public.events','title','UPDATE');`)),
+      "host can still edit normal event columns (title)").toBe("t");
+    expect(scalar(runSql(`select has_column_privilege('authenticated','public.events','status','UPDATE');`)),
+      "host can still change status (publish/cancel)").toBe("t");
+    expect(scalar(runSql(`select has_column_privilege('authenticated','public.events','locked_at','UPDATE');`)),
+      "events.locked_at must NOT be directly updatable by authenticated (lock_event only; irreversible)").toBe("f");
 
     // rate_limits: depth limiter — denied to anon AND authenticated (DEFINER-only, M3).
     const rlLeak = lines(

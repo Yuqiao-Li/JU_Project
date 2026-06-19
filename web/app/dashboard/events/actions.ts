@@ -13,6 +13,18 @@ export type EventFormState = {
 };
 
 /**
+ * Read + validate the host's WeChat from the event form (round-4). WeChat is the
+ * host's own profile field (single source of truth — NOT an events column), prefilled
+ * into the form and required at create/save so the lock-time two-way reveal has a value
+ * to surface. Returns the trimmed value, or an error sentinel the action surfaces.
+ */
+function readHostWechat(formData: FormData): { ok: true; value: string } | { ok: false } {
+  const raw = String(formData.get("wechat_id") ?? "").trim();
+  if (raw.length === 0 || raw.length > 100) return { ok: false };
+  return { ok: true, value: raw };
+}
+
+/**
  * Create / edit event server actions (task 2.2a, core fields).
  *
  * Authorization is the DB's job, never the form's (CLAUDE.md): every write runs
@@ -57,6 +69,13 @@ export async function createEvent(_prev: EventFormState, formData: FormData): Pr
   if (!parsed.ok) return { status: "error", message: parsed.message };
   const { input, intent, password } = parsed.value;
 
+  // Host WeChat (round-4) — required, stored on the host's own profile (single source
+  // of truth). Validate BEFORE creating so we don't leave a wechat-less event behind.
+  const wechat = readHostWechat(formData);
+  if (!wechat.ok) {
+    return { status: "error", message: "Add your WeChat so guests can reach you once the event locks." };
+  }
+
   // Mint the human-readable + crypto-tailed slug (D15). The DB column also has a
   // crypto-strong fallback default, but the readable slug comes from here.
   const { data: slug, error: slugError } = await supabase.rpc("generate_event_slug", {
@@ -90,6 +109,9 @@ export async function createEvent(_prev: EventFormState, formData: FormData): Pr
     if (passwordError) return { status: "error", message: passwordError };
   }
 
+  // WeChat lives only on the profile (RLS: own row, id = auth.uid()).
+  await supabase.from("profiles").update({ wechat_id: wechat.value }).eq("id", user.id);
+
   revalidatePath("/dashboard");
   // Land on the event's own page so the host can grab the public link.
   redirect(`/dashboard/events/${created.id}/edit?created=1`);
@@ -108,6 +130,12 @@ export async function updateEvent(_prev: EventFormState, formData: FormData): Pr
   const parsed = parseEventForm(formData);
   if (!parsed.ok) return { status: "error", message: parsed.message };
   const { input, intent, password } = parsed.value;
+
+  // Host WeChat (round-4) — required, saved to the host's own profile.
+  const wechat = readHostWechat(formData);
+  if (!wechat.ok) {
+    return { status: "error", message: "Add your WeChat so guests can reach you once the event locks." };
+  }
 
   // Don't let a content Save resurrect a cancelled event (H5): a cancelled event
   // keeps its status until the host explicitly re-publishes via setEventStatus.
@@ -139,6 +167,9 @@ export async function updateEvent(_prev: EventFormState, formData: FormData): Pr
     const passwordError = await applyPassword(supabase, eventId, password);
     if (passwordError) return { status: "error", message: passwordError };
   }
+
+  // WeChat lives only on the profile (RLS: own row, id = auth.uid()).
+  await supabase.from("profiles").update({ wechat_id: wechat.value }).eq("id", user.id);
 
   revalidatePath("/dashboard");
   revalidatePath(`/dashboard/events/${eventId}/edit`);
@@ -192,6 +223,34 @@ export async function setEventStatus(
 
   if (error) return { ok: false, error: "failed" };
   if (!data) return { ok: false, error: "not_found" };
+
+  revalidatePath("/dashboard");
+  revalidatePath(`/dashboard/events/${eventId}`);
+  return { ok: true };
+}
+
+/**
+ * Host-only event lock (round-4) — irreversible finalize via the DEFINER RPC
+ * lock_event. The RPC re-checks host ownership (auth.uid() == host_id) and only ever
+ * moves locked_at null → now() (idempotent, never cleared). Locking closes new RSVPs
+ * and opens the two-way WeChat reveal. Returns a stable error code; the caller renders
+ * the localized message.
+ */
+export async function lockEvent(eventId: string): Promise<LifecycleState> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: "unauthenticated" };
+
+  const { error } = await supabase.rpc("lock_event", { event_id: eventId });
+  if (error) {
+    const msg = (error.message ?? "").toLowerCase();
+    if (msg.includes("not authorized") || msg.includes("not found")) {
+      return { ok: false, error: "not_found" };
+    }
+    return { ok: false, error: "failed" };
+  }
 
   revalidatePath("/dashboard");
   revalidatePath(`/dashboard/events/${eventId}`);

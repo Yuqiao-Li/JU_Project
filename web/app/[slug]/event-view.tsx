@@ -1,6 +1,7 @@
 import { useTranslations } from "next-intl";
 
 import { AddToCalendar } from "@/components/events/add-to-calendar";
+import { CopyText } from "@/components/events/copy-text";
 import { EventEffect } from "@/components/events/event-effect";
 import { LocalWhen } from "@/components/events/local-when";
 import { spotsLeftLabel } from "@/lib/events/capacity";
@@ -64,6 +65,11 @@ export function EventView({
   // no voting, no add-to-calendar — the guest list + feed stay visible for reference.
   const cancelled = event.status === "cancelled";
   const inactive = cancelled || ended === true;
+  // Round-4: a LOCKED (finalized) but still-live event. Reads is_locked straight from
+  // the RPC payload (never recomputed client-side). Locking closes new RSVPs (we drop
+  // the rsvpSlot) and, once contacts open, reveals the host's WeChat ticket below.
+  const locked = event.is_locked === true && !inactive;
+  const hostWechat = event.host_wechat_id ?? null;
 
   // Address tier: only ever the full text when the payload says unlocked AND carries
   // it. Otherwise the city (first tier) is all there is to show.
@@ -90,6 +96,35 @@ export function EventView({
             {cancelled ? t("cancelledBanner") : t("endedBanner")}
           </p>
         </div>
+      )}
+
+      {/* ── Locked / finalized banner (round-4) — neutral/positive tone ───────── */}
+      {locked && (
+        <div
+          role="status"
+          className="mt-6 rounded-2xl border border-iris/40 bg-iris/10 px-5 py-4 text-center"
+        >
+          <p className="font-display text-lg font-bold text-paper">{t("lockedBanner")}</p>
+          {event.rsvp_enabled !== false && (
+            <p className="mt-1 text-sm text-muted">{t("lockedRsvpClosed")}</p>
+          )}
+        </div>
+      )}
+
+      {/* ── Digital stub (数码票根): the host's WeChat, revealed only because the data
+          layer included it (unlocked + locked + within the burn window). ──────── */}
+      {hostWechat && (
+        <section className="mt-6 rounded-2xl border border-iris/30 bg-surface/60 p-5">
+          <p className="eyebrow">{t("ticketHeading")}</p>
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-sm text-muted">{t("ticketHostWechat")}</p>
+              <p className="mt-0.5 break-all font-mono text-paper">{hostWechat}</p>
+            </div>
+            <CopyText value={hostWechat} />
+          </div>
+          <p className="mt-3 text-xs text-muted">{t("ticketHint")}</p>
+        </section>
       )}
 
       {/* ── Headcount (first tier, only when the RPC returned counts) ─────────── */}
@@ -181,8 +216,9 @@ export function EventView({
           The RSVP form (name + status + optional +1/contact, guest_token, waitlist)
           slots in here from EventClient. It re-reads the event with the token on
           success to reveal the unlocked view above (task 2.4b). A cancelled/ended event
-          shows no RSVP — the banner above already explains it (audit B4/H15). */}
-      {!inactive && rsvpSlot}
+          shows no RSVP — the banner above already explains it (audit B4/H15). A LOCKED
+          event also closes new RSVPs (round-4): lock = finalize. */}
+      {!inactive && !locked && rsvpSlot}
 
       {/* ── Who's coming (second tier; unlocked viewers only, task 3.1) ─────────
           Renders only once an RSVP has unlocked the view — the data layer doesn't

@@ -380,6 +380,7 @@ export type Database = {
           location_city: string | null
           location_text: string | null
           location_url: string | null
+          locked_at: string | null
           max_plus_ones: number
           rsvp_enabled: boolean
           slug: string
@@ -415,6 +416,7 @@ export type Database = {
           location_city?: string | null
           location_text?: string | null
           location_url?: string | null
+          locked_at?: string | null
           max_plus_ones?: number
           rsvp_enabled?: boolean
           slug?: string
@@ -450,6 +452,7 @@ export type Database = {
           location_city?: string | null
           location_text?: string | null
           location_url?: string | null
+          locked_at?: string | null
           max_plus_ones?: number
           rsvp_enabled?: boolean
           slug?: string
@@ -480,6 +483,7 @@ export type Database = {
           guest_token: string
           id: string
           user_id: string | null
+          wechat_id: string | null
         }
         Insert: {
           contact?: string | null
@@ -489,6 +493,7 @@ export type Database = {
           guest_token?: string
           id?: string
           user_id?: string | null
+          wechat_id?: string | null
         }
         Update: {
           contact?: string | null
@@ -498,6 +503,7 @@ export type Database = {
           guest_token?: string
           id?: string
           user_id?: string | null
+          wechat_id?: string | null
         }
         Relationships: [
           {
@@ -523,6 +529,7 @@ export type Database = {
           display_name: string | null
           id: string
           username: string | null
+          wechat_id: string | null
         }
         Insert: {
           avatar_url?: string | null
@@ -530,6 +537,7 @@ export type Database = {
           display_name?: string | null
           id: string
           username?: string | null
+          wechat_id?: string | null
         }
         Update: {
           avatar_url?: string | null
@@ -537,6 +545,7 @@ export type Database = {
           display_name?: string | null
           id?: string
           username?: string | null
+          wechat_id?: string | null
         }
         Relationships: []
       }
@@ -716,6 +725,18 @@ export type Database = {
         Args: { ends_at?: string; event_id: string; starts_at: string }
         Returns: Json
       }
+      event_contact_open: {
+        Args: {
+          p_ends_at?: string
+          p_locked_at?: string
+          p_starts_at?: string
+        }
+        Returns: boolean
+      }
+      event_is_locked: {
+        Args: { p_locked_at?: string; p_starts_at?: string }
+        Returns: boolean
+      }
       finalize_date: {
         Args: { event_id: string; option_id: string }
         Returns: Json
@@ -739,11 +760,16 @@ export type Database = {
         }
         Returns: Json
       }
+      get_event_guest_contacts: {
+        Args: { event_id: string }
+        Returns: Json
+      }
       get_guest_list: {
         Args: { guest_token?: string; slug: string }
         Returns: Json
       }
       get_my_events: { Args: never; Returns: Json }
+      lock_event: { Args: { event_id: string }; Returns: Json }
       get_public_events: { Args: never; Returns: Json }
       get_public_events_by_host: { Args: { username: string }; Returns: Json }
       guest_unlock_status: {
@@ -767,6 +793,7 @@ export type Database = {
           plus_ones?: number
           slug: string
           status?: string
+          wechat_id?: string
         }
         Returns: Json
       }

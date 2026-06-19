@@ -28,6 +28,10 @@ export const rsvpInputSchema = z.object({
   plus_ones: z.number().int().min(0).max(20).default(0),
   // contact is host-visible metadata ONLY and NEVER an identity/auth key (D1). Optional.
   contact: z.string().trim().max(200).nullish(),
+  // Round-4: guest WeChat. The DB enforces it as REQUIRED for going/maybe (and gates
+  // its later reveal on lock); this boundary mirror only bounds the length so a forged
+  // body can't send an absurd value. Optional here — the form gates required-ness.
+  wechat_id: z.string().trim().max(100).nullish(),
   // The returning guest's OWN credential, recovered from localStorage. Optional; when
   // absent the server mints a fresh token. UUID-shaped or omitted — a client-chosen
   // value can at most match an existing event-scoped guest, never forge a new identity.

@@ -157,7 +157,13 @@ export function EventClient({
 
   async function handleSubmitted(
     result: RsvpResult,
-    input: { display_name: string; status: RsvpStatus; plus_ones: number; contact: string | null },
+    input: {
+      display_name: string;
+      status: RsvpStatus;
+      plus_ones: number;
+      contact: string | null;
+      wechat_id: string | null;
+    },
   ) {
     const rec: RsvpRecord = {
       token: result.guest_token,
@@ -165,6 +171,7 @@ export function EventClient({
       plus_ones: result.plus_ones,
       display_name: input.display_name,
       contact: input.contact,
+      wechat_id: input.wechat_id,
     };
     saveRsvpRecord(slug, rec);
     setRecord(rec);

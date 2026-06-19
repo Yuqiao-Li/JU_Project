@@ -169,7 +169,11 @@
     "uploading": "上传中…",
     "replaceCover": "更换封面",
     "uploadCover": "上传封面",
-    "remove": "移除"
+    "remove": "移除",
+    "sectionHostContact": "你的联系方式",
+    "wechatLabel": "你的微信号",
+    "wechatPlaceholder": "你的微信号",
+    "wechatHint": "活动定档后，才会展示给已回复的客人。"
   },
   "hostEvent": {
     "backToEvents": "← 我的活动",
@@ -207,7 +211,20 @@
     "previewAsGuest": "以访客身份预览",
     "draftLinkHint": "活动还是草稿——发布后这个链接才对访客生效。",
     "copyContacts": "复制全部联系方式（{count}）",
-    "copyContactsCopied": "已复制"
+    "copyContactsCopied": "已复制",
+    "lockEvent": "锁定活动",
+    "lockConfirmHeading": "确认锁定这场活动？",
+    "lockConfirmIrreversible": "此操作无法撤销。",
+    "lockConfirmReveal": "双方的微信号将互相开放——已回复的客人能看到你的微信，你也能看到他们的。",
+    "lockConfirmStops": "将停止接收新的回复。",
+    "lockConfirm": "确认锁定",
+    "lockCancel": "再想想",
+    "lockedBadge": "已定档",
+    "contactsHeading": "联系方式已解锁",
+    "contactsClosed": "联系方式查看窗口已关闭。",
+    "contactsCopy": "复制",
+    "contactsCopied": "已复制",
+    "lockFailed": "锁定失败，请重试。"
   },
   "settings": {
     "backToEvents": "返回活动",
@@ -227,7 +244,10 @@
     "usernameClearConfirm": "我确认：删除我的公开主页，并让那些链接失效。",
     "usernameClearBlocked": "保存前请先确认你要删除公开主页。",
     "save": "保存资料",
-    "saving": "保存中……"
+    "saving": "保存中……",
+    "wechatLabel": "微信号",
+    "wechatPlaceholder": "你的微信号",
+    "wechatHint": "（活动定档后才会展示给已回复的客人）"
   },
   "eventPage": {
     "madeWith": "用",
@@ -245,7 +265,14 @@
     "endedBanner": "活动已结束",
     "unlockLoading": "正在加载活动详情…",
     "unlockFailed": "活动详情没能加载出来。",
-    "unlockRetry": "刷新查看详情"
+    "unlockRetry": "刷新查看详情",
+    "lockedBanner": "活动已定档",
+    "lockedRsvpClosed": "回复已截止——活动已定档。",
+    "ticketHeading": "数码票根",
+    "ticketHostWechat": "主办方微信",
+    "ticketHint": "活动结束 24 小时后，联系方式会自动隐藏。",
+    "copyButton": "复制",
+    "copiedButton": "已复制"
   },
   "rsvp": {
     "eyebrow": "回复",
@@ -278,7 +305,10 @@
     "confirmMaybe": "已标记为「可能去」——随时可以在下面修改。",
     "confirmNotGoing": "收到——你这次不来。改主意了随时在下面调整。",
     "confirmDefault": "你的回复已保存。随时可以在下面更新。",
-    "addToCalendar": "添加到日历"
+    "addToCalendar": "添加到日历",
+    "wechatLabel": "你的微信号",
+    "wechatPlaceholder": "方便定档后主办方联系你",
+    "wechatRequired": "请填写微信号，方便主办方联系你。"
   },
   "feed": {
     "whosComing": "谁会来",

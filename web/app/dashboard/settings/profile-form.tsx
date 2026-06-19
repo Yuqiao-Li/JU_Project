@@ -20,9 +20,11 @@ type Remote = { for: string; kind: "available" | "taken" | "unknown" } | null;
 export function ProfileForm({
   initialDisplayName,
   initialUsername,
+  initialWechatId,
 }: {
   initialDisplayName: string;
   initialUsername: string;
+  initialWechatId: string;
 }) {
   const t = useTranslations("settings");
   const [state, formAction, pending] = useActionState(updateProfile, INITIAL);
@@ -133,6 +135,25 @@ export function ProfileForm({
           />
         </div>
         <p className={`text-xs ${hintColor}`}>{hint.text}</p>
+      </div>
+
+      <div className="flex flex-col gap-2">
+        <label htmlFor="wechat_id" className="eyebrow">
+          {t("wechatLabel")}
+        </label>
+        <input
+          id="wechat_id"
+          name="wechat_id"
+          type="text"
+          defaultValue={initialWechatId}
+          maxLength={100}
+          autoCapitalize="none"
+          autoCorrect="off"
+          spellCheck={false}
+          placeholder={t("wechatPlaceholder")}
+          className="h-12 rounded-xl border border-line bg-surface-2 px-4 text-paper placeholder:text-muted/60 focus:border-iris focus:outline-none"
+        />
+        <p className="text-xs text-muted">{t("wechatHint")}</p>
       </div>
 
       {clearingUsername && (

@@ -139,9 +139,20 @@ describe("task 2.4b [SECURITY]: RSVP + token + waitlist (TEST-SPEC §2.4)", () =
       plus_ones?: number;
       contact?: string;
       client_fingerprint?: string;
+      wechat_id?: string;
     },
   ): Promise<{ res: ApiResult; data: Record<string, unknown> | null }> {
-    const res = (await client.rpc(FN_RSVP, args)) as ApiResult;
+    // round-4: submit_rsvp now REQUIRES a wechat_id for going/maybe. These token/
+    // waitlist tests predate that gate and aren't about wechat, so default-inject one
+    // for attending intents (callers can still override) — preserving each test's
+    // original intent rather than tripping the unrelated new requirement.
+    const status = args.status ?? "going";
+    const needsWechat = status === "going" || status === "maybe";
+    const body: Record<string, unknown> = { ...args };
+    if (needsWechat && args.wechat_id === undefined) {
+      body.wechat_id = `${args.display_name}-wx`;
+    }
+    const res = (await client.rpc(FN_RSVP, body)) as ApiResult;
     return { res, data: (res.data as Record<string, unknown> | null) ?? null };
   }
 

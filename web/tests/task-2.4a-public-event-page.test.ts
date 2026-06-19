@@ -257,6 +257,10 @@ describe("task 2.4a [SECURITY]: public event page SSR + tiering + private + pass
         slug: SLUG_RSVP,
         display_name: "t24a fresh guest",
         status: "going",
+        // round-4: wechat is now required for going/maybe — supply it so this
+        // pre-lock unlock-flow test still exercises its original intent (the
+        // address reveal after a real RSVP), not the new wechat gate.
+        wechat_id: "t24a-fresh-wx",
       })) as ApiResult;
       expect(submit.error, JSON.stringify(submit.error)).toBeNull();
       const minted = submit.data as Record<string, unknown> | null;
@@ -343,6 +347,9 @@ describe("task 2.4a [SECURITY]: public event page SSR + tiering + private + pass
         slug: SLUG_FULL,
         display_name: "t24a overflow guest",
         status: "going",
+        // round-4: wechat required for going/maybe (this is a waitlist test, not a
+        // wechat test — supply one so the original waitlist intent survives).
+        wechat_id: "t24a-overflow-wx",
       })) as ApiResult;
       expect(submit.error, JSON.stringify(submit.error)).toBeNull();
       const minted = submit.data as Record<string, unknown> | null;

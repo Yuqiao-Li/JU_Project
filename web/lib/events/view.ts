@@ -44,6 +44,14 @@ export const eventViewSchema = z.object({
   status: z.string().optional(),
   requires_password: z.boolean().optional(),
   locked: z.boolean().optional(),
+  // Round-4: the event is "locked"/finalized (manual lock or auto within 1 day of
+  // start). Always present on the normal tiered façade; absent on a password-locked
+  // minimal payload. Closes new RSVPs and opens the two-way contact reveal.
+  is_locked: z.boolean().optional(),
+  // Round-4: the host's WeChat, revealed ONLY to an unlocked (RSVP'd) viewer once the
+  // event is locked AND within the burn window (阅后即焚). The data layer omits it
+  // otherwise, so a missing key reads as "not revealed".
+  host_wechat_id: z.string().nullable().optional(),
   unlocked: z.boolean().optional(),
   going_count: z.number().optional(),
   capacity_remaining: z.number().nullable().optional(),

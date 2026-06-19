@@ -131,10 +131,10 @@ describe("Batch 4 [LIFECYCLE]: event-view gates RSVP / calendar / poll behind !i
     ).toBe(true);
   });
 
-  it("RSVP is gated behind !inactive — a cancelled/ended event renders NO RSVP form", () => {
+  it("RSVP is gated behind !inactive && !locked — a cancelled/ended OR locked event renders NO RSVP form", () => {
     expect(
-      /\{\s*!inactive\s*&&\s*rsvpSlot\s*\}/.test(VIEW),
-      "event-view: the rsvpSlot only renders while !inactive",
+      /\{\s*!inactive\s*&&\s*!locked\s*&&\s*rsvpSlot\s*\}/.test(VIEW),
+      "event-view: the rsvpSlot only renders while !inactive AND !locked (round-4: a locked event closes new RSVPs)",
     ).toBe(true);
   });
 
