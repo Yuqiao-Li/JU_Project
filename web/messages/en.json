@@ -78,6 +78,10 @@
     "badge": {
       "private": "Private"
     },
+    "hero": {
+      "manage": "Manage this one",
+      "reuse": "Host it again"
+    },
     "card": {
       "locationSeparator": " · ",
       "goingCount": "{count} going",

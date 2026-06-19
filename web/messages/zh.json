@@ -78,6 +78,10 @@
     "badge": {
       "private": "私密"
     },
+    "hero": {
+      "manage": "管理这一局",
+      "reuse": "再开一局"
+    },
     "card": {
       "locationSeparator": " · ",
       "goingCount": "{count} 人来",

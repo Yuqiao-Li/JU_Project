@@ -4,9 +4,24 @@ import { getTranslations } from "next-intl/server";
 
 import { signOut } from "@/app/auth/actions";
 import { Wordmark } from "@/components/brand/wordmark";
+import { EventCard } from "@/components/events/event-card";
 import { LocalWhen } from "@/components/events/local-when";
 import { groupEventsByTime, parseMyEvents, type MyEvent } from "@/lib/events/feed";
+import { isEventLocked } from "@/lib/events/lock";
 import { createClient } from "@/lib/supabase/server";
+
+/**
+ * The host's "current/latest" hosted event for the 局卡顶 hero (dashboard.md): the most
+ * recent ACTIVE (published) event they host — the soonest upcoming one, else the most
+ * recently-finished one. Drafts/cancelled events and events they merely attend don't get
+ * the hero. null when there's none to feature (the hero renders nothing then).
+ */
+function pickHeroEvent(upcoming: MyEvent[], past: MyEvent[]): MyEvent | null {
+  const isLiveHost = (e: MyEvent) => e.role === "host" && e.status === "published";
+  // upcoming is soonest-first, past is most-recent-first (groupEventsByTime), so the first
+  // live-host match in each already gives the right "current, else latest" pick.
+  return upcoming.find(isLiveHost) ?? past.find(isLiveHost) ?? null;
+}
 
 /**
  * The unified "your events" dashboard (task 2.3).
@@ -46,8 +61,25 @@ export default async function DashboardPage() {
     throw new Error("Failed to load your events");
   }
   const events = parseMyEvents(feed);
-  const { upcoming, past } = groupEventsByTime(events, new Date());
+  const now = new Date();
+  const { upcoming, past } = groupEventsByTime(events, now);
   const hasEvents = events.length > 0;
+
+  // 局卡顶 (dashboard.md): feature the host's current/latest published event with the shared
+  // 局卡. The feed lacks capacity + lock state, so read just those two for the hero over the
+  // host's own RLS path (a non-owner row can't appear — the hero id came from their own feed).
+  const hero = pickHeroEvent(upcoming, past);
+  let heroCapacity: number | null = null;
+  let heroLocked = false;
+  if (hero) {
+    const { data: heroRow } = await supabase
+      .from("events")
+      .select("capacity, locked_at, starts_at")
+      .eq("id", hero.id)
+      .maybeSingle();
+    heroCapacity = heroRow?.capacity ?? null;
+    heroLocked = isEventLocked(heroRow?.locked_at ?? null, heroRow?.starts_at ?? null, now);
+  }
 
   return (
     <div className="flex flex-1 flex-col">
@@ -83,6 +115,34 @@ export default async function DashboardPage() {
             {t("newEvent")}
           </Link>
         </div>
+
+        {hero && (
+          <section className="mt-10">
+            <EventCard
+              mode="host"
+              slug={hero.slug}
+              capacity={heroCapacity}
+              goingCount={hero.going_count ?? 0}
+              isLocked={heroLocked}
+              unlocked={undefined}
+              record={null}
+            />
+            <div className="mt-3 flex flex-wrap items-center gap-4 text-sm">
+              <Link
+                href={`/dashboard/events/${hero.id}`}
+                className="font-semibold text-iris underline-offset-2 hover:underline"
+              >
+                {t("hero.manage")}
+              </Link>
+              <Link
+                href={`/dashboard/events/new?from=${hero.id}`}
+                className="font-semibold text-iris underline-offset-2 hover:underline"
+              >
+                {t("hero.reuse")}
+              </Link>
+            </div>
+          </section>
+        )}
 
         {!hasEvents ? (
           <div className="mt-8 rounded-2xl border border-line bg-surface/60 p-6">
@@ -161,7 +221,7 @@ function EventSection({
         <ul className="mt-4 space-y-3">
           {events.map((event) => (
             <li key={event.id}>
-              <EventCard
+              <EventListRow
                 event={event}
                 muted={muted}
                 roleLabels={roleLabels}
@@ -170,6 +230,16 @@ function EventSection({
                 dateTbdLabel={dateTbdLabel}
                 t={t}
               />
+              {/* 再开一局: a small clone affordance on each HOSTED row (a sibling, not nested
+                  in the row Link), leaving the list's open-this-event semantics untouched. */}
+              {event.role === "host" && (
+                <Link
+                  href={`/dashboard/events/new?from=${event.id}`}
+                  className="mt-1.5 ml-1 inline-block text-xs font-semibold text-muted underline-offset-2 transition hover:text-iris hover:underline"
+                >
+                  {t("hero.reuse")}
+                </Link>
+              )}
             </li>
           ))}
         </ul>
@@ -178,7 +248,7 @@ function EventSection({
   );
 }
 
-function EventCard({
+function EventListRow({
   event,
   muted,
   roleLabels,
