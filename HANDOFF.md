@@ -314,3 +314,44 @@ curl -s -w '\nHTTP %{http_code}\n' 'https://<PROJECT>.supabase.co/rest/v1/rpc/ge
 - §7.7 FUTURE：封面预设、生成式局卡、Google Maps 横向嵌入。
 - AUDIT 中/低：服务端报错文案 i18n（M3–M6）、无障碍扫除（M7–M12）、B6 账号解锁不含实时名单。
 - 可选硬化：发现页加分页/搜索；`unlisted` 第三档可见性。
+
+---
+
+## 12. Round-4 待办：微信绑定 + 局「锁定」后双向开放联系方式（2026-06-18 设计定案，未实现）
+
+> 用户新需求。设计已与用户逐条确认；**未动手**。这是个**大功能 + 安全敏感**项，单独成轮做（实现 agent + 独立测试 agent + 全量门禁）。
+
+### 决策（用户定案）
+- **主办微信号必填**：创建活动时填，存在 **profile**（同一主办所有活动共用），首次填、之后**自动预填复用**；设置页也能改。
+- **访客微信号必填**：RSVP 时填。
+- **都不提前展示** —— 双方微信号在局「**锁定**」前对谁都不可见；锁定后**双向**开放：访客看主办、主办看访客（**访客之间不互见**）。
+- **锁定触发**：① 主办**手动**点「锁定」——需**二次确认**，确认后**不可逆**（不允许再解锁）；② **自动**——活动**开始时间前 1 天**自动锁。
+- **锁定后不再接受新 RSVP**（锁定 = 定档收尾）。
+- `date_tbd`（无日期）只能手动锁（无开始时间，自动锁不触发）。
+
+### 数据（迁移 0021，下一个编号）
+- `profiles.wechat_id text` —— 主办微信。
+- `events.locked_at timestamptz null` —— 手动锁的时间戳（不可逆；null=未手动锁）。
+- `guests.wechat_id text` —— 访客微信（RSVP 必填；**不要**复用现有 `guests.contact`，那是 host-anytime-visible 的旧字段，语义不同）。
+- 派生 `is_locked` = `locked_at IS NOT NULL OR (starts_at IS NOT NULL AND now() >= starts_at - interval '1 day')` —— **在 RPC 里算，不需要 cron**。
+
+### 安全（DB 是边界，仿地址二级分层；这是本功能的核心风险）
+微信号是"锁定后才给"的字段，**必须在 SECURITY DEFINER RPC 里按 `is_locked` 门控**，绝不能 anon / 未锁时拿到（和 `location_text` 同等对待）：
+- `get_event_by_slug`：仅 `is_locked` 时返回 host `wechat_id`（给访客）；始终返回 `is_locked` 布尔（UI 据此显示状态/横幅）。
+- `get_guest_list`：仅 `is_locked` 时返回各访客 `wechat_id`（给主办）；未锁前只返回名字（现状）。
+- `submit_rsvp`：新增 `wechat_id` 必填参数；若 `is_locked` 则**拒绝**（不再收）。
+- 新 `lock_event(event_id)` RPC：host-only（`host_id = auth.uid()`），`set locked_at = now()`；已锁则 no-op/报错（不可逆、幂等）。
+- 护栏：新字段别触发 check-boundaries 禁词；anon 仍只经 RPC，无表级授权。
+
+### UI 面
+- `profile-form.tsx`（设置页）：加微信号字段（编辑 `profiles.wechat_id`）。
+- `event-form.tsx`（创建/编辑）：加微信号字段，**从 profile 预填、必填、提交时写回 profile**（单一真相源）。
+- `rsvp-form.tsx`：加微信号**必填**字段（→ `guests.wechat_id`）。
+- `event-view.tsx`（活动页）：锁定后展示主办微信（二级，仿地址解锁）；加「已锁定/已定档」状态横幅；锁定后禁 RSVP（仿 cancelled/ended 的 `inactive`）。
+- `dashboard/events/[id]/page.tsx`（主办详情）：加「锁定活动」按钮（**二次确认**，文案说明：不可逆 + 会开放双方联系方式 + 停止收新回复）；锁定后展示各访客微信。
+
+### 爆炸半径
+`profiles`/`events`/`guests`（迁移 0021）、`get_event_by_slug`/`get_guest_list`/`submit_rsvp`（改+门控）、新 `lock_event`、`profile-form`/`event-form`/`rsvp-form`/`event-view`/`dashboard events [id]`、`view.ts`/`guest-list.ts`/`rsvp.ts` schema（加 wechat + is_locked 字段）、lifecycle actions（lock）、`types/database.ts` regen、i18n（zh+en）。
+
+### 独立测试（DB 安全测试，仿 `migration-0020`）
+未锁时 `get_event_by_slug`/`get_guest_list` **绝不**返回任何 `wechat_id`；锁定后才返回；`submit_rsvp` 缺 wechat 被拒、锁后 RSVP 被拒；`lock_event` 仅 host 可调、不可逆；自动锁的派生逻辑（pin `now()` 不便，可用一个 starts_at 在 24h 内/外的事件断言 is_locked 派生）。
