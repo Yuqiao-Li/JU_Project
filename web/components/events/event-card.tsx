@@ -52,6 +52,13 @@ export interface EventCardProps {
   unlocked: boolean | undefined;
   /** The viewer's OWN cached RSVP (null = not yet RSVP'd); drives the opening face + standing. */
   record: RsvpRecord | null;
+  /**
+   * Force the opening face, overriding {@link initialCardState}. The 局详情 page passes
+   * `"personal"` so the card lands directly on 态2 ("局卡的页面应该是直接实时呈现第二个
+   * 状态") — pre-RSVP it shows 缺X人 + a 留位 prompt; post-RSVP the viewer's standing.
+   * Omitted elsewhere ⇒ the pure {@link initialCardState} rule (share/save art first).
+   */
+  initialState?: CardState;
   /** The role-specific form revealed on the second tap (guest = edit RSVP, host = manage). */
   children?: React.ReactNode;
 }
@@ -64,13 +71,14 @@ export function EventCard({
   isLocked,
   unlocked,
   record,
+  initialState,
   children,
 }: EventCardProps) {
   const t = useTranslations("eventCard");
 
   const hasRsvp = record != null;
-  const [state, setState] = useState<CardState>(() =>
-    initialCardState({ mode, hasRsvp }),
+  const [state, setState] = useState<CardState>(
+    () => initialState ?? initialCardState({ mode, hasRsvp }),
   );
   const [expanded, setExpanded] = useState(false);
   const animate = useAnimationEnabled();
@@ -121,12 +129,17 @@ export function EventCard({
         </button>
       ) : (
         <div className="flex flex-col gap-4 p-5">
-          {/* 态2 你的状态 — only when the viewer has a standing. */}
+          {/* 态2 你的状态 — the viewer's own standing once RSVP'd; otherwise a 留位
+              prompt (the reserve form sits below the card on the detail page). */}
           {standing !== "none" ? (
             <p className="text-sm font-semibold text-paper" data-viewer-status={standing}>
               {viewerStatusLabel(standing, t)}
             </p>
-          ) : null}
+          ) : (
+            <p className="text-sm font-semibold text-paper" data-viewer-status="none">
+              {t("reservePrompt")}
+            </p>
+          )}
 
           {/* 成局进度 — 人数看板 (counts only, never a name list). */}
           <div className="flex flex-col gap-1" data-gathering-status={gathering}>
@@ -139,21 +152,28 @@ export function EventCard({
             <p className="text-xs text-muted">{gatheringStatusLabel(gathering, t)}</p>
           </div>
 
-          {/* Second tap expands the role-specific form (guest edit / host manage). */}
-          <button
-            type="button"
-            onClick={advance}
-            aria-expanded={expanded}
-            className="self-start text-sm font-semibold text-iris underline-offset-2 hover:underline"
-          >
-            {expanded
-              ? t("collapse")
-              : mode === "host"
-                ? t("expandManage")
-                : t("expandEdit")}
-          </button>
+          {/* Second tap expands the role-specific form (guest edit / host manage).
+              Only when a form is actually supplied — a card with no children shows no
+              dangling expand control (the 局详情 page renders its reserve form as a
+              sibling below the card instead). */}
+          {children != null ? (
+            <>
+              <button
+                type="button"
+                onClick={advance}
+                aria-expanded={expanded}
+                className="self-start text-sm font-semibold text-iris underline-offset-2 hover:underline"
+              >
+                {expanded
+                  ? t("collapse")
+                  : mode === "host"
+                    ? t("expandManage")
+                    : t("expandEdit")}
+              </button>
 
-          {expanded ? <div>{children}</div> : null}
+              {expanded ? <div>{children}</div> : null}
+            </>
+          ) : null}
         </div>
       )}
     </div>

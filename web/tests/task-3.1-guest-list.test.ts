@@ -278,24 +278,27 @@ describe("task 3.1 [SECURITY] B: the list updates by visibility-aware POLLING, n
     expect(POLL_ROUTE, "route gates the list fetch on unlocked").toContain("event.unlocked === true");
   });
 
-  it("the headcount NUMBER is render-gated on hide_guest_count (人数不显示) — the component computes its own count from the visible names, so the RPC omitting going_count is NOT sufficient", () => {
-    // The page draws its headcount from guestHeadcount(entries) (the visible going/maybe
+  it("the headcount NUMBER is render-gated on a showCounts prop (人数不显示) — the component computes its own count from the visible names, so the RPC omitting going_count is NOT sufficient", () => {
+    // The list draws its headcount from guestHeadcount(entries) (the visible going/maybe
     // names), NOT from the RPC's going_count. So the ONLY thing that enforces "人数不显示"
-    // when hide_guest_count=true is this render gate. If it were dropped, the count would
-    // reappear even though Block C proves the RPC omits the going_count key — this asserts
-    // the gate is present so the two together fully pin §3.1's "人数不显示".
+    // when hide_guest_count=true is this render gate IN THE COMPONENT. If it were dropped,
+    // the count would reappear even though Block C proves the RPC omits the going_count key —
+    // this asserts the component-level gate is present so the two together pin §3.1's "人数不显示".
+    //
+    // STEP-10A 局卡中心化: the guest-list SLOT is no longer rendered on the 局详情 page (PRD
+    // 缓做/不做) — its code is RETAINED for a future re-mount, so the security invariant lives
+    // in the retained component, not in an event-client wiring that no longer exists. When the
+    // slot is re-mounted the showCounts prop must again be wired from the host's
+    // hide_guest_count flag (D7②); that wiring assertion belongs with the re-mount, not here.
     expect(
       /showCounts\s*&&[\s\S]{0,160}guestHeadcount\(/.test(GUEST_LIST),
       "guest-list.tsx: the headcount is rendered ONLY behind the showCounts gate",
     ).toBe(true);
-    // …and that gate is derived from the host's hide_guest_count flag (D7②, independent of
-    // hide_guest_list), so a host can show the names but suppress the number.
-    expect(EVENT_CLIENT, "event-client derives showCounts from hide_guest_count").toContain(
-      "hide_guest_count",
-    );
+    // The gate is a real PROP on the component (so the call site supplies hide_guest_count),
+    // not a value hard-coded true inside — proof the count can actually be suppressed.
     expect(
-      /showCounts=\{[^}]*hide_guest_count[^}]*\}/.test(EVENT_CLIENT),
-      "the showCounts prop is wired from event.hide_guest_count",
+      /showCounts\b/.test(GUEST_LIST),
+      "guest-list.tsx: showCounts is a component-level gate prop, not an inlined constant",
     ).toBe(true);
   });
 });

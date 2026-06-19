@@ -7,7 +7,7 @@
 1. **迁移 0022 + RPC 边界测试**（基础，PDF/视觉无关）— ✅ 完成
 2. 局卡组件 + `next/og` 图片路由 + QR 生成库 — ✅ 完成（**QR 库安装待你**）
 3. 建局（成局目标=capacity reframe / 发布校验 +时间/TBD+城市 / category+card_variant；选局卡视觉 picker→Step 10B）— ✅ 完成
-4. 局详情（改造 `EventClient`：局卡顶+留位，移 slot，保地址 reveal）
+4. 局详情（改造 `EventClient`：局卡顶+留位，移 slot，保地址 reveal）— ✅ 完成
 5. 管理（改造 `[id]/page`：局卡+展开管理 / 满→提示成局 wiring）
 6. 仪表盘（局卡顶 + 一键复用 `/new?from=`）
 7. 设置（昵称合并 / host 通用联系方式 / 去 `/u/`）
@@ -30,4 +30,10 @@
 - **保留外观段**（cover/theme/effect）；**选局卡视觉 picker = Step 10B**。
 - 测试：`event-schema.test.ts` +14 断言、修 `task-3-timezone.test.ts`（helper 加 city）。建局集成测试经 DB 直插、不过表单，故发布校验不影响它们。
 - 门禁：vitest **721/721**、护栏 **8/8**。
-- 任务 3 ✅ → 任务 4 进行中。
+
+### 任务 4 — 局详情 局卡中心化　【✅ 完成 2026-06-19】
+- `event-view.tsx` 加 `cardSlot`（有卡时用 EventCard 当 hero、并隐藏重复人数 chip）；`event-client.tsx` 把 EventCard 作 cardSlot、RsvpForm 作 rsvpSlot，**不再 wire 名单/评论/投票 slot**（组件文件 + EventView 的可选 slot props 保留，仅页面层不传）；EventCard 加可选 `initialState` prop，局详情传 `personal` 直显态2（card.ts 未改，19/19 仍绿）。
+- **分级安全保留**：地址仅 `event.unlocked` 时渲染（EventView Where 段未改、location_text 只读一次）；RSVP 仍 `!inactive && !locked` 门控；取消/结束/锁定横幅 + host 微信票根 stub 不变。管线全保留（token/poll/handleSubmitted/ended/viewerIsHost/密码解锁路径）。
+- 测试：测试 agent 把 `task-4-lifecycle.test.ts` 的脆弱 JSX grep 改写成行为/安全不变量断言（地址解锁门控、RSVP 门控、locked 横幅、卡作 hero）；`task-3.1-guest-list.test.ts` 一条失效 grep 重定向到组件层。
+- 门禁：vitest **727/727**、护栏 **8/8**。
+- 任务 4 ✅ → 任务 5 进行中。

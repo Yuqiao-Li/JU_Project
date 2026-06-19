@@ -424,6 +424,7 @@
     "spotsNeeded": "{count} more needed",
     "statusReserved": "Spot reserved",
     "statusLockedSeat": "Seat locked in",
+    "reservePrompt": "No spot yet — reserve one below.",
     "gatheringOpen": "Open for RSVPs",
     "gatheringFullPending": "Full — awaiting confirmation",
     "gatheringFormed": "🎉 It's on — join the group chat",

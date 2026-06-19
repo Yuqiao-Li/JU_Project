@@ -29,6 +29,7 @@ import type { EventView } from "@/lib/events/view";
 export function EventView({
   event,
   ended,
+  cardSlot,
   rsvpSlot,
   pollSlot,
   guestListSlot,
@@ -37,6 +38,13 @@ export function EventView({
   event: EventView;
   /** True when the event's time has passed (audit H4) — gates RSVP/voting/calendar. */
   ended?: boolean;
+  /**
+   * The 局卡 (event-card) hero (client), slotted in by `EventClient` (Step-10A task 4).
+   * When present it REPLACES the poster hero at the top — the card-centric 局详情 — and
+   * the card owns the 成局 count board, so the standalone headcount chips are suppressed
+   * to avoid a duplicate count. When omitted the page keeps the classic poster hero.
+   */
+  cardSlot?: React.ReactNode;
   /** The RSVP interaction (client), slotted in by `EventClient`. */
   rsvpSlot?: React.ReactNode;
   /**
@@ -83,8 +91,11 @@ export function EventView({
 
   return (
     <article className="mx-auto w-full max-w-2xl px-5 py-10 sm:px-8 sm:py-14">
-      {/* ── Hero / poster: the signature element ─────────────────────────────── */}
-      <Hero event={event} accent={accent} isPrivate={isPrivate} />
+      {/* ── Hero ──────────────────────────────────────────────────────────────
+          Card-centric (Step-10A task 4): when EventClient slots in the 局卡, it IS
+          the hero (态2 progress) and owns the count board. Otherwise the classic
+          poster hero. */}
+      {cardSlot ?? <Hero event={event} accent={accent} isPrivate={isPrivate} />}
 
       {/* ── Cancelled / ended banner (audit B4/H4) ───────────────────────────── */}
       {inactive && (
@@ -127,8 +138,10 @@ export function EventView({
         </section>
       )}
 
-      {/* ── Headcount (first tier, only when the RPC returned counts) ─────────── */}
-      {(hasCount || capacityLine) && (
+      {/* ── Headcount (first tier, only when the RPC returned counts) ───────────
+          Suppressed when the 局卡 hero is present — the card's 态2 already shows the
+          成局 count board (已 N 人 / 缺 X 人), so a separate chip row would duplicate it. */}
+      {!cardSlot && (hasCount || capacityLine) && (
         <div className="mt-6 flex flex-wrap items-center gap-2.5">
           {hasCount && (
             <span className="inline-flex items-center gap-2 rounded-full border border-line bg-surface/60 px-3.5 py-1.5 text-sm text-paper">

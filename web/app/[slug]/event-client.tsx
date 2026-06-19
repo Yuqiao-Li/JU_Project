@@ -4,13 +4,11 @@ import { useCallback, useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 
 import { EventView } from "./event-view";
-import { CommentsFeed } from "@/components/events/comments-feed";
-import { DatePoll } from "@/components/events/date-poll";
-import { GuestList } from "@/components/events/guest-list";
+import { EventCard } from "@/components/events/event-card";
 import { RsvpForm } from "@/components/events/rsvp-form";
 import type { CommentEntry } from "@/lib/events/comments";
 import { isEventEnded } from "@/lib/events/format";
-import { parseDatePoll, pollIsActive, type DatePoll as DatePollData } from "@/lib/events/date-poll";
+import { parseDatePoll, type DatePoll as DatePollData } from "@/lib/events/date-poll";
 import { parseGuestList, type GuestListEntry } from "@/lib/events/guest-list";
 import {
   loadRsvpRecord,
@@ -22,8 +20,9 @@ import { themeColorFromJson, themeSwatch } from "@/lib/events/theme";
 import { eventViewSchema, type EventView as EventViewData } from "@/lib/events/view";
 
 /**
- * Client shell for the public event page (tasks 2.4b + 3.1) — wires the RSVP
- * interaction, the token-driven unlock, and the live guest list onto the SSR façade.
+ * Client shell for the public event page (tasks 2.4b + 3.1; Step-10A task 4 局卡中心化)
+ * — wires the RSVP interaction and the token-driven unlock onto the SSR façade, with the
+ * 局卡 (event-card, 态2) as the hero and the reserve form below it.
  *
  * SSR renders only the FIRST tier (no token exists server-side — it lives in
  * localStorage and never rides the URL) and seeds this component via `initialEvent`.
@@ -32,16 +31,22 @@ import { eventViewSchema, type EventView as EventViewData } from "@/lib/events/v
  * the unlocked event façade (full address) AND the desensitized guest list — so:
  *  - a returning guest re-sees the unlocked tier without the token ever appearing in a
  *    shareable place, and a private event still resolves only through our trusted hop;
- *  - the "who's coming" list stays live via VISIBILITY-AWARE POLLING (task 3.1, D4):
- *    a plain re-read of the tiered RPC every {@link POLL_INTERVAL_MS} while the tab is
- *    visible, paused when hidden — NOT a realtime subscription, NEVER a direct table
- *    read. The lenient `event_poll` quota (token present) keeps normal polling un-429'd.
+ *  - the façade stays live via VISIBILITY-AWARE POLLING (task 3.1, D4): a plain re-read
+ *    of the tiered RPC every {@link POLL_INTERVAL_MS} while the tab is visible, paused
+ *    when hidden — NOT a realtime subscription, NEVER a direct table read. The lenient
+ *    `event_poll` quota (token present) keeps normal polling un-429'd.
  *
- * STRICT TIERING stays a DATA fact, not a CSS one: the address and the list only ever
- * show because the re-read returned them for an unlocked caller — we never synthesise
- * them. A re-read that comes back LOCKED (invalid token, or a password event whose
- * credential cookie is gone — task 2.5) is ignored so we never overwrite a good view
- * with a re-locked one.
+ * DEFERRED SLOTS (PRD 缓做/不做): the guest list, comments feed, and date poll are no
+ * longer RENDERED here (MVP 局卡中心化). The data PIPELINE that feeds them is untouched —
+ * `applySnapshot` still populates `guests`/`poll` from every re-read and the page still
+ * receives `initialComments`/`initialPoll`/`viewerIsHost` — so re-mounting a slot later
+ * is a render-only change. The component files + their tests stay in place.
+ *
+ * STRICT TIERING stays a DATA fact, not a CSS one: the address (and the card's counts)
+ * only ever show because the re-read returned them for an unlocked caller — we never
+ * synthesise them. A re-read that comes back LOCKED (invalid token, or a password event
+ * whose credential cookie is gone — task 2.5) is ignored so we never overwrite a good
+ * view with a re-locked one.
  */
 
 /** Poll cadence while a token-holding guest has the tab in front of them. 4 reads/min —
@@ -206,10 +211,38 @@ export function EventClient({
   const effectiveEnded =
     ended ?? isEventEnded(event.starts_at ?? null, event.ends_at ?? null, event.date_tbd === true);
 
+  // DEFERRED 局详情 slots (PRD 缓做/不做): the guest list, comments feed, and date poll
+  // are no longer RENDERED on this page (MVP 局卡中心化), but the data pipeline that feeds
+  // them stays whole — `applySnapshot` keeps populating `guests`/`poll` from every re-read,
+  // and the page still receives `initialComments`/`initialPoll`/`viewerIsHost`. Holding the
+  // references here keeps that plumbing intact (and lint-quiet) so re-mounting a slot later
+  // is a render-only change, not a re-wiring. See EventClient docblock + event-page.md.
+  void guests;
+  void poll;
+  void initialComments;
+  void initialPoll;
+  void viewerIsHost;
+
   return (
     <EventView
       event={event}
       ended={effectiveEnded}
+      cardSlot={
+        // 局卡 (态2 个人化) AS the hero — opens directly on the personal face per design
+        // ("局卡的页面应该是直接实时呈现第二个状态"). Pre-RSVP it shows 缺X人 + a 留位
+        // prompt; once `record`/`handleSubmitted` land it personalizes to the viewer's
+        // standing. Counts come from the same façade the strict-tiering data layer returns.
+        <EventCard
+          mode="guest"
+          slug={slug}
+          capacity={event.capacity ?? null}
+          goingCount={event.going_count ?? 0}
+          isLocked={event.is_locked}
+          unlocked={event.unlocked}
+          record={record}
+          initialState="personal"
+        />
+      }
       rsvpSlot={
         <>
           <RsvpForm
@@ -243,39 +276,6 @@ export function EventClient({
             </div>
           )}
         </>
-      }
-      pollSlot={
-        pollIsActive(poll) ? (
-          <DatePoll
-            slug={slug}
-            poll={poll}
-            token={token}
-            unlocked={event.unlocked === true}
-            accent={accent}
-            onVoted={setPoll}
-          />
-        ) : null
-      }
-      guestListSlot={
-        <GuestList
-          guests={guests}
-          unlocked={event.unlocked === true}
-          hidden={event.hide_guest_list === true}
-          showCounts={event.hide_guest_count !== true}
-          accent={accent}
-        />
-      }
-      commentsSlot={
-        <CommentsFeed
-          slug={slug}
-          initialComments={initialComments}
-          unlocked={event.unlocked === true}
-          rsvpEnabled={event.rsvp_enabled !== false}
-          viewerIsHost={viewerIsHost}
-          hideTimestamps={event.hide_feed_timestamps === true}
-          token={token}
-          accent={accent}
-        />
       }
     />
   );

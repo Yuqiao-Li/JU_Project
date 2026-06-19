@@ -424,6 +424,7 @@
     "spotsNeeded": "缺 {count} 人",
     "statusReserved": "留位中",
     "statusLockedSeat": "已锁定席位",
+    "reservePrompt": "还没留位——在下面留个位置吧。",
     "gatheringOpen": "报名中",
     "gatheringFullPending": "已满待成局",
     "gatheringFormed": "🎉 已成局，去加微信群",

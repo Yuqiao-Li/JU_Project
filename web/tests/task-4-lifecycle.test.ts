@@ -20,8 +20,13 @@ import { isEventEnded } from "../lib/events/format";
  *   - app/[slug]/page.tsx   — the public page hides a DRAFT (404) but renders a CANCELLED
  *                              event read-only; it computes `ended` and passes it down.
  *   - app/[slug]/event-view.tsx — derives `inactive = cancelled || ended` and gates
- *                              RSVP / add-to-calendar / date-poll behind `!inactive`,
- *                              plus a cancelled/ended banner.
+ *                              RSVP behind `!inactive && !locked`, plus a cancelled/ended
+ *                              banner AND a locked banner; the FULL address is gated on
+ *                              `event.unlocked` (never rendered when locked).
+ *   - app/[slug]/event-client.tsx — Step-10A 局卡中心化: the 局卡 (EventCard) is slotted in
+ *                              as the hero (cardSlot) with the RsvpForm below (rsvpSlot);
+ *                              the guest-list / comments / date-poll slots are NO LONGER
+ *                              rendered on this page (PRD 缓做/不做, code retained).
  *   - app/dashboard/events/actions.ts — setEventStatus + deleteEvent exist; updateEvent
  *                              preserves a cancelled status on save (no resurrect, H5).
  *
@@ -30,6 +35,14 @@ import { isEventEnded } from "../lib/events/format";
  * React client can't be rendered under vitest (server-only + @/-alias make the page
  * un-importable), so the page/view/action invariants are pinned on the SOURCE TEXT — the
  * same static-guard posture the task-4.1 suite uses for its structural invariants.
+ *
+ * STEP-10A NOTE (局卡中心化 refactor). This suite was rewritten away from brittle JSX
+ * source-greps that pinned the OLD event-view layout (e.g. AddToCalendar/pollSlot inside
+ * the `!inactive` block, a rendered guestListSlot/commentsSlot). The 局卡 refactor moved
+ * the hero to the EventCard and dropped those slots from the page. The assertions below
+ * now pin the SECURITY/BEHAVIOR INVARIANTS that must survive ANY layout — RSVP suppressed
+ * when inactive OR locked, the right banner shown, the full address unlocked-gated, the
+ * card-as-hero + RsvpForm wiring — rather than the exact JSX that happened to encode them.
  */
 
 const HOUR = 60 * 60 * 1000;
@@ -117,74 +130,178 @@ describe("Batch 4 [LIFECYCLE]: the public page hides a DRAFT but renders a CANCE
   });
 });
 
-describe("Batch 4 [LIFECYCLE]: event-view gates RSVP / calendar / poll behind !inactive and shows a banner (audit B4/H4)", () => {
+describe("Batch 4 [LIFECYCLE]: event-view suppresses RSVP when inactive/locked, shows the right banner, and unlocked-gates the address (audit B4/H4 · 局卡中心化)", () => {
   const VIEW = src("app/[slug]/event-view.tsx");
 
-  it("derives a single `inactive` state = cancelled || ended (the one gate everything keys off)", () => {
+  it("derives `inactive` from cancelled OR ended (the one state the dead-event gate keys off)", () => {
+    // The exact spelling of the derivation can shift; what matters is BOTH inputs feed it.
     expect(
       /cancelled\s*=\s*event\.status === "cancelled"/.test(VIEW),
-      "event-view: cancelled derived from event.status",
+      "event-view: cancelled is derived from event.status === 'cancelled'",
     ).toBe(true);
     expect(
-      /inactive\s*=\s*cancelled\s*\|\|\s*ended/.test(VIEW),
-      "event-view: inactive = cancelled || ended",
+      /inactive\s*=[^\n;]*cancelled[^\n;]*\|\|[^\n;]*ended/.test(VIEW),
+      "event-view: inactive folds in BOTH cancelled and ended",
     ).toBe(true);
   });
 
-  it("RSVP is gated behind !inactive && !locked — a cancelled/ended OR locked event renders NO RSVP form", () => {
+  it("INVARIANT: RSVP is NOT rendered when the event is inactive (cancelled/ended) OR locked", () => {
+    // The 局卡 refactor keeps the rsvpSlot, but it must stay behind the !inactive && !locked
+    // gate. Pin the INVARIANT (the slot's render is conditioned on both negations) rather than
+    // a fixed JSX shape, so a layout move can't quietly expose RSVP on a dead or finalized event.
+    expect(VIEW, "event-view still slots in the RSVP interaction").toContain("rsvpSlot");
     expect(
-      /\{\s*!inactive\s*&&\s*!locked\s*&&\s*rsvpSlot\s*\}/.test(VIEW),
-      "event-view: the rsvpSlot only renders while !inactive AND !locked (round-4: a locked event closes new RSVPs)",
+      /!inactive\s*&&\s*!locked\s*&&\s*rsvpSlot/.test(VIEW),
+      "event-view: rsvpSlot renders ONLY while !inactive AND !locked (cancelled/ended/locked all close RSVP)",
     ).toBe(true);
+    // The slot is never rendered UNGATED: the only standalone-expression render of `rsvpSlot`
+    // (i.e. `{ … rsvpSlot}`, not the multi-prop destructuring header) carries the gate. We
+    // exclude the param-destructuring block (which legitimately lists the prop name) and check
+    // that no remaining single-line `{…rsvpSlot}` container lacks the !inactive && !locked gate.
+    const renderSites = (VIEW.match(/^\s*\{[^{}\n]*\brsvpSlot\b[^{}\n]*\}/gm) ?? []).filter(
+      (s) => !/:\s*React\.ReactNode/.test(s),
+    );
+    expect(renderSites.length, "event-view: there is exactly one rsvpSlot render site").toBe(1);
+    for (const site of renderSites) {
+      expect(
+        /!inactive\s*&&\s*!locked/.test(site),
+        `event-view: the rsvpSlot render site is gated by !inactive && !locked (offending: ${site})`,
+      ).toBe(true);
+    }
   });
 
-  it("add-to-calendar AND the date poll are gated behind !inactive (no calendar / no voting on a dead event)", () => {
-    // Both live inside the same `{!inactive && ( … <AddToCalendar/> … {pollSlot} … )}` block.
-    expect(
-      /\{\s*!inactive\s*&&\s*\([\s\S]*AddToCalendar[\s\S]*\)\s*\}/.test(VIEW),
-      "event-view: AddToCalendar is inside the !inactive block",
-    ).toBe(true);
-    expect(
-      /\{\s*!inactive\s*&&\s*\([\s\S]*pollSlot[\s\S]*\)\s*\}/.test(VIEW),
-      "event-view: the date pollSlot is inside the !inactive block",
-    ).toBe(true);
-  });
-
-  it("renders a cancelled-or-ended banner whose text distinguishes the two states", () => {
+  it("INVARIANT: a cancelled/ended banner shows when inactive, with text that distinguishes the two states", () => {
     expect(
       /inactive\s*&&/.test(VIEW),
-      "event-view: the banner is shown when inactive",
+      "event-view: a banner is shown when the event is inactive",
     ).toBe(true);
     expect(
       /cancelled\s*\?\s*t\("cancelledBanner"\)\s*:\s*t\("endedBanner"\)/.test(VIEW),
-      "event-view: banner picks cancelledBanner vs endedBanner by status",
+      "event-view: the banner text picks cancelledBanner vs endedBanner by status",
     ).toBe(true);
   });
 
-  it("both banner messages exist in the en AND zh catalogs (no missing-key fallback at runtime)", () => {
+  it("INVARIANT: a LOCKED (finalized) event shows the locked banner and is derived as locked-and-still-live", () => {
+    // Round-4 / 局卡: a locked-but-not-dead event reads its own banner. `locked` is taken
+    // straight from the payload (is_locked) and excludes the inactive case so a cancelled
+    // event never reads "locked in" instead of "cancelled".
+    expect(
+      /locked\s*=\s*event\.is_locked === true\s*&&\s*!inactive/.test(VIEW),
+      "event-view: locked = event.is_locked (from the payload) AND !inactive",
+    ).toBe(true);
+    expect(
+      /locked\s*&&/.test(VIEW),
+      "event-view: the locked banner is shown when locked",
+    ).toBe(true);
+    expect(VIEW, "event-view: the locked banner uses the lockedBanner message").toContain(
+      't("lockedBanner")',
+    );
+  });
+
+  it("the cancelled / ended / locked banner messages all exist in the en AND zh catalogs, with the two dead-state banners distinct", () => {
     const en = JSON.parse(src("messages/en.json")).eventPage;
     const zh = JSON.parse(src("messages/zh.json")).eventPage;
     for (const [name, m] of [["en", en], ["zh", zh]] as const) {
       expect(typeof m?.cancelledBanner === "string" && m.cancelledBanner.length > 0, `${name}.cancelledBanner present`).toBe(true);
       expect(typeof m?.endedBanner === "string" && m.endedBanner.length > 0, `${name}.endedBanner present`).toBe(true);
-      // The two messages must be DISTINCT — a cancelled event and an over event read differently.
+      expect(typeof m?.lockedBanner === "string" && m.lockedBanner.length > 0, `${name}.lockedBanner present`).toBe(true);
+      // The two DEAD-state messages must be DISTINCT — a cancelled event and an over event read differently.
       expect(m.cancelledBanner, `${name}: cancelled vs ended banners are distinct`).not.toBe(m.endedBanner);
     }
   });
 
-  it("the guest list + activity feed are NOT gated by inactive (they stay readable for reference after the event)", () => {
-    // B4 keeps the page useful post-event: the list/feed render regardless of inactive, so
-    // they must NOT sit inside a !inactive gate. (The slots appear bare, not behind !inactive.)
-    expect(VIEW, "guestListSlot is rendered").toContain("guestListSlot");
-    expect(VIEW, "commentsSlot is rendered").toContain("commentsSlot");
+  it("INVARIANT: the FULL address is gated on event.unlocked — never rendered when the viewer is locked (DESIGN-TONE 未 RSVP 真实地不渲染地址)", () => {
+    // The crux of strict tiering at the render layer: fullAddress can ONLY ever be a value
+    // when event.unlocked is truthy. If a regression dropped the gate (e.g. read
+    // location_text directly), a locked viewer would see the exact address even though the
+    // data layer's omission is the real defence — this pins the render gate as a second wall.
+    expect(
+      /fullAddress\s*=\s*event\.unlocked\s*\?\s*event\.location_text/.test(VIEW),
+      "event-view: fullAddress is `event.unlocked ? event.location_text : null`",
+    ).toBe(true);
+    // The map link rides the same gate (a second-tier field — never shown to a locked viewer).
+    expect(
+      /mapUrl\s*=\s*event\.unlocked\s*\?\s*event\.location_url/.test(VIEW),
+      "event-view: mapUrl is unlocked-gated alongside the address",
+    ).toBe(true);
+    // The full street text is only ever rendered through the unlocked-derived `fullAddress`,
+    // never by reaching for event.location_text again in the JSX.
+    const rawLocationReads = VIEW.match(/event\.location_text/g) ?? [];
+    expect(
+      rawLocationReads.length,
+      "event-view: event.location_text is read EXACTLY once — through the unlocked-gated fullAddress",
+    ).toBe(1);
+  });
+
+  it("局卡中心化: the deferred slots remain OPTIONAL props on event-view (code retained for a future re-mount, PRD 缓做/不做)", () => {
+    // The 局卡 refactor drops these slots at the CALL SITE (event-client no longer passes them —
+    // pinned in the event-client block below), NOT by deleting event-view's ability to render
+    // them. event-view keeps them as OPTIONAL props so re-mounting later is render-only. Pin
+    // exactly that: each is an optional `?: React.ReactNode` prop, never a required one.
+    for (const slot of ["guestListSlot", "commentsSlot", "pollSlot"]) {
+      expect(
+        new RegExp(`${slot}\\?:\\s*React\\.ReactNode`).test(VIEW),
+        `event-view: ${slot} stays an OPTIONAL prop (retained for a future re-mount)`,
+      ).toBe(true);
+    }
+  });
+
+  it("INVARIANT: the dead-event page stays readable — the guest list / activity feed are NOT hidden behind the inactive gate (B4)", () => {
+    // B4 keeps the page useful post-event: whatever reference slots event-view renders must
+    // NOT sit inside a !inactive gate, so a cancelled/ended event still shows them for
+    // reference. (They render bare; the cardSlot/banner above explains the dead state.)
     expect(
       /!inactive\s*&&\s*guestListSlot/.test(VIEW),
-      "the guest list is NOT hidden on a cancelled/ended event",
+      "event-view: the guest list is NOT hidden on a cancelled/ended event",
     ).toBe(false);
     expect(
       /!inactive\s*&&\s*commentsSlot/.test(VIEW),
-      "the activity feed is NOT hidden on a cancelled/ended event",
+      "event-view: the activity feed is NOT hidden on a cancelled/ended event",
     ).toBe(false);
+  });
+});
+
+describe("Batch 4 [LIFECYCLE] · 局卡中心化: event-client slots the EventCard as hero + RsvpForm below, and keeps the dead-event flag flowing (Step-10A task 4)", () => {
+  const CLIENT = src("app/[slug]/event-client.tsx");
+
+  it("the 局卡 (EventCard) is slotted in as the hero via cardSlot", () => {
+    expect(CLIENT, "event-client imports the EventCard").toContain("EventCard");
+    expect(
+      /cardSlot=\{[\s\S]*<EventCard/.test(CLIENT),
+      "event-client: <EventCard …/> is passed in as the cardSlot (the 局卡 hero)",
+    ).toBe(true);
+  });
+
+  it("the RsvpForm is slotted in below as the rsvpSlot", () => {
+    expect(CLIENT, "event-client imports the RsvpForm").toContain("RsvpForm");
+    expect(
+      /rsvpSlot=\{[\s\S]*<RsvpForm/.test(CLIENT),
+      "event-client: <RsvpForm …/> is passed in as the rsvpSlot (留位表单 below the card)",
+    ).toBe(true);
+  });
+
+  it("the dead-event flag still reaches the view — ended is forwarded so the !inactive gate keeps working", () => {
+    // event-view's whole inactive gate depends on `ended` arriving. On the SSR path the page
+    // computes it; on the password-unlock path event-client derives it. Either way it must be
+    // passed to <EventView ended=…/> so a cancelled/ended event still suppresses RSVP.
+    expect(CLIENT, "event-client uses isEventEnded for the client-derived fallback").toContain(
+      "isEventEnded",
+    );
+    expect(
+      /ended=\{/.test(CLIENT),
+      "event-client: an `ended` flag is forwarded to <EventView/>",
+    ).toBe(true);
+  });
+
+  it("局卡中心化: the deferred guest-list / comments / date-poll slots are NOT passed from event-client either", () => {
+    // Belt-and-suspenders with the event-view check: even if a future event-view re-added a
+    // render site, event-client must not be wiring these props on the 局详情 page yet.
+    for (const slot of ["guestListSlot", "commentsSlot", "pollSlot"]) {
+      expect(
+        new RegExp(`${slot}=`).test(CLIENT),
+        `event-client: ${slot}= is not wired (deferred per 局卡中心化)`,
+      ).toBe(false);
+    }
   });
 });
 
