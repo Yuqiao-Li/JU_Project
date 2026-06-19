@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { type CategoryKey, parseCategory } from "./category";
 import { parseEffect, parseThemeColor, type ThemeKey } from "./theme";
 
 /**
@@ -37,6 +38,12 @@ export interface EventInput {
   effect: string | null;
   chip_in_url: string | null;
   chip_in_note: string | null;
+  // Step-10A — 建局 category + chosen 局卡 design (variant). Category is constrained to
+  // a known set (forged values fail closed to the generic default); card_variant is a
+  // free-form key for the auto-generated card the host picked (Step-10B picker), kept
+  // short and optional.
+  category: CategoryKey;
+  card_variant: string | null;
 }
 
 /**
@@ -112,10 +119,27 @@ function parseDateTime(raw: string, label: string): string | null | { error: str
 }
 
 /**
+ * Localized copy for the new publish-time validation messages. The rest of the
+ * schema's messages are hardcoded English (pre-existing); the Step-10A publish gate
+ * routes through next-intl, so the caller (a Server Action) passes the resolved
+ * strings in. Optional — omitted → English fallbacks, so unit tests / direct callers
+ * still work without an intl context.
+ */
+export interface PublishMessages {
+  /** Shown when publishing without a start time and without explicit "date TBD". */
+  needWhen?: string;
+  /** Shown when publishing without a city. */
+  needCity?: string;
+}
+
+/**
  * Parse + validate the whole form. Returns either the normalised, write-ready
  * payload or the first human-facing error message.
+ *
+ * `publishMessages` localizes the Step-10A publish-time gate (when + city). Drafts
+ * skip that gate entirely (you can save an incomplete event as a draft).
  */
-export function parseEventForm(formData: FormData): ParseResult {
+export function parseEventForm(formData: FormData, publishMessages?: PublishMessages): ParseResult {
   const title = titleSchema.safeParse(str(formData.get("title")));
   if (!title.success) return { ok: false, message: title.error.issues[0]?.message ?? "Check the title." };
 
@@ -178,6 +202,13 @@ export function parseEventForm(formData: FormData): ParseResult {
   const themeColor = parseThemeColor(str(formData.get("theme_color")));
   const effect = parseEffect(str(formData.get("effect")));
 
+  // Step-10A — 建局 category (constrained to a known set; forged/absent → generic
+  // default) + chosen 局卡 design variant (free-form key from the Step-10B picker,
+  // optional, length-capped so the DB never sees junk).
+  const category = parseCategory(str(formData.get("category")));
+  const rawCardVariant = str(formData.get("card_variant")).trim();
+  const cardVariant = rawCardVariant.length > 0 ? rawCardVariant.slice(0, 80) : null;
+
   // The cover URL is produced by the uploader (it points at our public bucket),
   // but we still validate it's a well-formed http(s) URL before persisting.
   let coverImageUrl: string | null = null;
@@ -205,6 +236,25 @@ export function parseEventForm(formData: FormData): ParseResult {
   }
 
   const intent: EventIntent = str(formData.get("intent")) === "publish" ? "publish" : "draft";
+
+  // Step-10A publish gate (docs/prd/event-create.md 发布必填): publishing requires a
+  // time (a real start OR an explicit "date TBD") AND a city. Drafts have NO extra
+  // requirement — a host can save an incomplete event as a draft. (Title + WeChat are
+  // already enforced — title above, WeChat in the action.)
+  if (intent === "publish") {
+    if (!dateTbd && !startsAt) {
+      return {
+        ok: false,
+        message: publishMessages?.needWhen ?? "To publish, add a start time or mark the date as to be decided.",
+      };
+    }
+    if (!rawCity) {
+      return {
+        ok: false,
+        message: publishMessages?.needCity ?? "To publish, add a city.",
+      };
+    }
+  }
 
   // Password is three-state. A "clear" checkbox wins; otherwise a non-empty value
   // means "set", and an empty value means "keep" (the host didn't touch it).
@@ -244,6 +294,8 @@ export function parseEventForm(formData: FormData): ParseResult {
         effect,
         chip_in_url: chipInUrl,
         chip_in_note: chipInNote,
+        category,
+        card_variant: cardVariant,
       },
     },
   };

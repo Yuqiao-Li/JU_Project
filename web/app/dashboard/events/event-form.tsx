@@ -5,6 +5,7 @@ import { useActionState, useState } from "react";
 
 import { CoverUploader } from "@/components/events/cover-uploader";
 import { DateTimeField } from "@/components/events/date-time-field";
+import { CATEGORY_PRESETS, DEFAULT_CATEGORY } from "@/lib/events/category";
 import { DEFAULT_THEME, EFFECT_PRESETS, THEME_SWATCHES, type ThemeKey } from "@/lib/events/theme";
 
 import { createEvent, type EventFormState, updateEvent } from "./actions";
@@ -34,6 +35,8 @@ export type EventDefaults = {
   chipInUrl: string;
   chipInNote: string;
   wechatId: string;
+  category: string;
+  cardVariant: string;
 };
 
 const BLANK: EventDefaults = {
@@ -59,6 +62,8 @@ const BLANK: EventDefaults = {
   chipInUrl: "",
   chipInNote: "",
   wechatId: "",
+  category: DEFAULT_CATEGORY,
+  cardVariant: "",
 };
 
 const inputClass =
@@ -164,9 +169,28 @@ export function EventForm({
         </div>
       </section>
 
-      {/* Look — cover, theme color, effect */}
+      {/* Look — category (Step-10A: drives the auto-generated 局卡), then cover/theme/effect.
+          The per-card 选局卡 picker + previews are Step-10B; for now card_variant rides as a
+          hidden input carrying its default so the column gets written. */}
       <section className="flex flex-col gap-5">
         <SectionLabel>{t("sectionLook")}</SectionLabel>
+
+        {/* card_variant is chosen by the (future) per-card picker; default for now. */}
+        <input type="hidden" name="card_variant" value={d.cardVariant} />
+
+        <div className="flex flex-col gap-2">
+          <label htmlFor="category" className="text-sm text-muted">
+            {t("categoryLabel")} <span className="text-muted/60">{t("optional")}</span>
+          </label>
+          <select id="category" name="category" defaultValue={d.category || DEFAULT_CATEGORY} className={inputClass}>
+            {CATEGORY_PRESETS.map((c) => (
+              <option key={c.key} value={c.key}>
+                {t(`category_${c.key}`)}
+              </option>
+            ))}
+          </select>
+        </div>
+
         <CoverUploader eventId={mode === "edit" ? d.id : null} initialUrl={d.coverImageUrl} />
 
         <div className="flex flex-col gap-2">
@@ -318,6 +342,7 @@ export function EventForm({
               placeholder={t("capacityPlaceholder")}
               className={inputClass}
             />
+            <p className="text-xs text-muted">{t("capacityHint")}</p>
           </div>
           {allowPlusOnes && (
             <div className="flex flex-col gap-2">

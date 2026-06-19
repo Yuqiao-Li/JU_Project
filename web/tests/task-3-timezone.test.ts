@@ -48,6 +48,11 @@ function eventForm(over: Record<string, string> = {}): FormData {
   fd.set("title", "t3 tz event");
   fd.set("visibility", "public");
   fd.set("intent", "publish");
+  // Step-10A publish gate now requires a city (and a time-or-date_tbd). A city is
+  // unrelated to the timezone behaviour under test, so we set it on every publish
+  // here to keep these assertions focused on the start/end-time path. The "no time"
+  // cases below supply their own time or date_tbd as before.
+  fd.set("location_city", "New York");
   for (const [k, v] of Object.entries(over)) fd.set(k, v);
   return fd;
 }

@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 
 import { type EventInput, type PasswordChange, parseEventForm } from "@/lib/events/schema";
 import { createClient } from "@/lib/supabase/server";
@@ -55,7 +56,16 @@ function toEventColumns(input: EventInput) {
     effect: input.effect,
     chip_in_url: input.chip_in_url,
     chip_in_note: input.chip_in_note,
+    // Step-10A — 建局 category + chosen 局卡 design variant.
+    category: input.category,
+    card_variant: input.card_variant,
   };
+}
+
+/** Resolve the localized Step-10A publish-gate messages for parseEventForm. */
+async function publishMessages() {
+  const t = await getTranslations("eventForm");
+  return { needWhen: t("publishNeedWhen"), needCity: t("publishNeedCity") };
 }
 
 export async function createEvent(_prev: EventFormState, formData: FormData): Promise<EventFormState> {
@@ -65,7 +75,7 @@ export async function createEvent(_prev: EventFormState, formData: FormData): Pr
   } = await supabase.auth.getUser();
   if (!user) return { status: "error", message: "Your session expired. Sign in again." };
 
-  const parsed = parseEventForm(formData);
+  const parsed = parseEventForm(formData, await publishMessages());
   if (!parsed.ok) return { status: "error", message: parsed.message };
   const { input, intent, password } = parsed.value;
 
@@ -127,7 +137,7 @@ export async function updateEvent(_prev: EventFormState, formData: FormData): Pr
   const eventId = String(formData.get("event_id") ?? "");
   if (!eventId) return { status: "error", message: "Couldn't tell which event to save." };
 
-  const parsed = parseEventForm(formData);
+  const parsed = parseEventForm(formData, await publishMessages());
   if (!parsed.ok) return { status: "error", message: parsed.message };
   const { input, intent, password } = parsed.value;
 

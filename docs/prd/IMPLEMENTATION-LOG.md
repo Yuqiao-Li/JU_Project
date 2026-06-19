@@ -6,7 +6,7 @@
 ## 任务清单（依赖顺序）
 1. **迁移 0022 + RPC 边界测试**（基础，PDF/视觉无关）— ✅ 完成
 2. 局卡组件 + `next/og` 图片路由 + QR 生成库 — ✅ 完成（**QR 库安装待你**）
-3. 建局（选局卡 UI / 成局目标=capacity reframe / 发布校验 +时间/TBD+城市）
+3. 建局（成局目标=capacity reframe / 发布校验 +时间/TBD+城市 / category+card_variant；选局卡视觉 picker→Step 10B）— ✅ 完成
 4. 局详情（改造 `EventClient`：局卡顶+留位，移 slot，保地址 reveal）
 5. 管理（改造 `[id]/page`：局卡+展开管理 / 满→提示成局 wiring）
 6. 仪表盘（局卡顶 + 一键复用 `/new?from=`）
@@ -24,4 +24,10 @@
 - **⚠️ 待你（需终端批准）**：QR 库未装。图片路由的二维码处是占位框 + `TODO(QR)` 注释 + 明文 scanUrl；接上只需 `pnpm --dir web add <qr 库>` 再把 cardScanUrl 渲染成二维码。
 - **已知 MVP 取舍**：`gatheringStatus 'formed'` 用公开 façade 的 `is_locked`（公开层无法区分手动/自动锁）；`get_public_events` 静默隐藏仍用精确的 `locked_at`，安全/发现逻辑不受影响。任务 5 的"满→提示成局"用 `gatheringStatus 'full-pending'`。
 - 测试：`web/tests/task-step10a-card-helpers.test.ts`（19 例纯单测，全绿）。门禁：护栏 **8/8**（typecheck/lint/build + grep + RLS）。
-- 任务 2 ✅ → 任务 3 进行中。
+
+### 任务 3 — 建局功能层　【✅ 完成 2026-06-19】
+- 新件 `web/lib/events/category.ts`（占位分类预设 + parseCategory 失败回退 generic）。`schema.ts`：发布校验（intent=publish 需 时间或 date_tbd + 城市；草稿不限）+ 解析 category/card_variant（publish 消息走 next-intl，纯调用方有英文兜底）。`actions.ts`：写 events.category/card_variant。`event-form.tsx`：加 category select + card_variant 隐藏默认 + capacity 文案 reframe 成"成局目标/缺X人"（数据不变）。edit 页查询/预填 category/card_variant。eventForm i18n（zh+en 平价）。
+- **保留外观段**（cover/theme/effect）；**选局卡视觉 picker = Step 10B**。
+- 测试：`event-schema.test.ts` +14 断言、修 `task-3-timezone.test.ts`（helper 加 city）。建局集成测试经 DB 直插、不过表单，故发布校验不影响它们。
+- 门禁：vitest **721/721**、护栏 **8/8**。
+- 任务 3 ✅ → 任务 4 进行中。

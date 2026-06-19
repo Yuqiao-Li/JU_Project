@@ -34,7 +34,7 @@ export default async function EditEventPage({
   const { data: event } = await supabase
     .from("events")
     .select(
-      "id, slug, title, description, date_tbd, starts_at, ends_at, location_text, location_url, location_city, visibility, capacity, allow_plus_ones, max_plus_ones, rsvp_enabled, status, view_password_hash, cover_image_url, theme, effect, chip_in_url, chip_in_note",
+      "id, slug, title, description, date_tbd, starts_at, ends_at, location_text, location_url, location_city, visibility, capacity, allow_plus_ones, max_plus_ones, rsvp_enabled, status, view_password_hash, cover_image_url, theme, effect, chip_in_url, chip_in_note, category, card_variant",
     )
     .eq("id", id)
     .maybeSingle();
@@ -82,6 +82,8 @@ export default async function EditEventPage({
     chipInUrl: event.chip_in_url ?? "",
     chipInNote: event.chip_in_note ?? "",
     wechatId: profile?.wechat_id ?? "",
+    category: event.category ?? "",
+    cardVariant: event.card_variant ?? "",
   };
 
   return (
