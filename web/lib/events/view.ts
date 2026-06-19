@@ -24,6 +24,11 @@ export const eventViewSchema = z.object({
   cover_image_url: z.string().nullable().optional(),
   theme: z.unknown().optional(),
   effect: z.string().nullable().optional(),
+  // Step-10A: the 局分类 + chosen 局卡 design. Non-sensitive public façade fields the
+  // card art needs — always present on the normal tiered response (absent on the
+  // password-locked minimal payload, hence optional).
+  category: z.string().nullable().optional(),
+  card_variant: z.string().nullable().optional(),
   location_city: z.string().nullable().optional(),
   location_text: z.string().nullable().optional(),
   location_url: z.string().nullable().optional(),
@@ -52,6 +57,10 @@ export const eventViewSchema = z.object({
   // event is locked AND within the burn window (阅后即焚). The data layer omits it
   // otherwise, so a missing key reads as "not revealed".
   host_wechat_id: z.string().nullable().optional(),
+  // Step-10A: the host's GENERAL contact, revealed under the IDENTICAL gate as
+  // host_wechat_id (unlocked RSVP'd viewer + locked + burn window, 阅后即焚). The data
+  // layer omits it otherwise, so a missing key reads as "not revealed".
+  host_contact: z.string().nullable().optional(),
   unlocked: z.boolean().optional(),
   going_count: z.number().optional(),
   capacity_remaining: z.number().nullable().optional(),

@@ -361,6 +361,8 @@ export type Database = {
           allow_plus_ones: boolean
           anonymize_guest_list: boolean
           capacity: number | null
+          card_variant: string | null
+          category: string | null
           chip_in_note: string | null
           chip_in_url: string | null
           cover_image_url: string | null
@@ -397,6 +399,8 @@ export type Database = {
           allow_plus_ones?: boolean
           anonymize_guest_list?: boolean
           capacity?: number | null
+          card_variant?: string | null
+          category?: string | null
           chip_in_note?: string | null
           chip_in_url?: string | null
           cover_image_url?: string | null
@@ -433,6 +437,8 @@ export type Database = {
           allow_plus_ones?: boolean
           anonymize_guest_list?: boolean
           capacity?: number | null
+          card_variant?: string | null
+          category?: string | null
           chip_in_note?: string | null
           chip_in_url?: string | null
           cover_image_url?: string | null
@@ -525,6 +531,7 @@ export type Database = {
       profiles: {
         Row: {
           avatar_url: string | null
+          contact: string | null
           created_at: string
           display_name: string | null
           id: string
@@ -533,6 +540,7 @@ export type Database = {
         }
         Insert: {
           avatar_url?: string | null
+          contact?: string | null
           created_at?: string
           display_name?: string | null
           id: string
@@ -541,6 +549,7 @@ export type Database = {
         }
         Update: {
           avatar_url?: string | null
+          contact?: string | null
           created_at?: string
           display_name?: string | null
           id?: string
