@@ -405,5 +405,19 @@
       "body": "The link might be mistyped, or the host took the event down. Double-check the link, or head back to the start.",
       "cta": "Take me home"
     }
+  },
+  "eventCard": {
+    "flipToProgress": "View gathering progress",
+    "artAlt": "Event card front (time and city)",
+    "goingCount": "{count} going",
+    "spotsNeeded": "{count} more needed",
+    "statusReserved": "Spot reserved",
+    "statusLockedSeat": "Seat locked in",
+    "gatheringOpen": "Open for RSVPs",
+    "gatheringFullPending": "Full — awaiting confirmation",
+    "gatheringFormed": "🎉 It's on — join the group chat",
+    "expandEdit": "Edit my RSVP",
+    "expandManage": "Manage this event",
+    "collapse": "Collapse"
   }
 }
