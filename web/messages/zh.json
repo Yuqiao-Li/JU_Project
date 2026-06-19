@@ -235,7 +235,9 @@
     "contactsClosed": "联系方式查看窗口已关闭。",
     "contactsCopy": "复制",
     "contactsCopied": "已复制",
-    "lockFailed": "锁定失败，请重试。"
+    "lockFailed": "锁定失败，请重试。",
+    "formPromptHeading": "可成局了，确认成局？",
+    "formPromptBody": "名额已满。确认成局即锁定本场——双方微信互相开放，停止接收新的回复。"
   },
   "settings": {
     "backToEvents": "返回活动",

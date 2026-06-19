@@ -4,6 +4,7 @@ import { getTranslations } from "next-intl/server";
 
 import { CopyLinkButton } from "@/components/events/copy-link-button";
 import { CopyText } from "@/components/events/copy-text";
+import { EventCard } from "@/components/events/event-card";
 import { LocalWhen } from "@/components/events/local-when";
 import { goingOccupancy, remainingSpots } from "@/lib/events/capacity";
 import { isEventLocked } from "@/lib/events/lock";
@@ -15,13 +16,23 @@ import { LockEventButton } from "./lock-event-button";
 import { PromoteButton } from "./promote-button";
 
 /**
- * Host event detail (task 2.3).
+ * Host event detail (task 2.3) — 局卡中心化 (Step-10A task 5).
  *
- * The management view for an event the host owns: the public link to share, the
- * live headcount, and the FULL guest list — host-only, so it includes contact
- * (M1) and the Can't-Go / waitlist rows a guest never sees. Everything loads over
- * the host's own RLS path (USING host_id = auth.uid()), so a non-owner simply gets
- * no rows → notFound(); contact never leaves the host boundary.
+ * The management view for an event the host owns. Step-10A re-nests it around the shared
+ * 局卡: the page now renders the EventCard (mode "host", opening on 态2 个人化) as the hero,
+ * with the EXISTING management content (public link, stats, roster, copy-contacts,
+ * waitlist+promote, lifecycle, lock, the R4 unlocked-contacts panel) supplied as the card's
+ * expand children — same 同构 interaction as the guest detail page. This is a presentation
+ * re-nesting only: every capability and its security path is unchanged.
+ *
+ * Everything still loads over the host's own RLS path (USING host_id = auth.uid()), so a
+ * non-owner simply gets no rows → notFound(); contact never leaves the host boundary.
+ *
+ * 满→提示成局 (README 跨页契约): when the gathering is FULL but the host has not MANUALLY
+ * confirmed (going occupancy ≥ capacity AND capacity set AND locked_at IS NULL), we surface
+ * a prominent "可成局了，确认成局？" prompt that drives the EXISTING lock_event flow via
+ * LockEventButton — no new RPC. A pure time-derived auto-lock (is_locked without locked_at)
+ * is NOT 成局 and must NOT raise this prompt (成局 ≠ 锁定).
  */
 
 type GuestEmbed = { display_name: string; contact: string | null } | null;
@@ -117,6 +128,13 @@ export default async function HostEventDetailPage({ params }: { params: Promise<
   const remaining = remainingSpots(event.capacity, goingCount);
   const isFull = remaining === 0;
 
+  // 满→提示成局 (README 跨页契约 · 成局 ≠ 锁定): the prompt fires ONLY when the gathering is
+  // filled but the host has NOT manually confirmed — going occupancy ≥ a real capacity AND
+  // locked_at IS NULL. We gate on locked_at (not the derived `locked`, which folds in the
+  // time-based auto-lock) so a pure auto-lock never raises the "确认成局？" prompt. This
+  // mirrors card.ts gatheringStatus's `full-pending` case, which the EventCard itself shows.
+  const fullPending = event.capacity != null && remaining === 0 && event.locked_at == null;
+
   return (
     <div className="mx-auto w-full max-w-2xl flex-1 px-5 py-12 sm:px-8">
       <Link href="/dashboard" className="text-sm text-muted transition hover:text-paper">
@@ -145,113 +163,147 @@ export default async function HostEventDetailPage({ params }: { params: Promise<
         />
       </p>
 
-      <div className="mt-6 flex flex-wrap gap-3">
-        <Link
-          href={`/dashboard/events/${event.id}/edit`}
-          className="inline-flex h-10 items-center justify-center rounded-lg border border-line px-4 text-sm font-semibold text-paper transition hover:bg-surface-2"
+      {/*
+        局卡中心化: the shared 局卡 is the hero. It opens on 态2 个人化 (initialState
+        "personal") and reveals all management content as its expand children — host 同构
+        with the guest detail page. record is null (the host is not a guest留位); isLocked
+        drives the card's own 成局 progress board; unlocked is undefined (the host never
+        "unlocks" their own seat — the gated contacts panel lives in the children below).
+      */}
+      <div className="mt-6">
+        <EventCard
+          mode="host"
+          slug={event.slug}
+          capacity={event.capacity}
+          goingCount={goingCount}
+          isLocked={locked}
+          unlocked={undefined}
+          record={null}
+          initialState="personal"
         >
-          {t("editEvent")}
-        </Link>
-      </div>
+          {/* 满→提示成局: the most prominent thing inside the card when filled-but-unconfirmed.
+              It reuses the EXISTING LockEventButton two-step confirm (lock_event, R4). */}
+          {fullPending && (
+            <div className="mb-6 flex flex-col gap-3 rounded-xl border border-coral/40 bg-coral/10 p-4">
+              <p className="font-display text-lg font-bold text-paper">{t("formPromptHeading")}</p>
+              <p className="text-sm text-paper/90">{t("formPromptBody")}</p>
+              <div>
+                <LockEventButton eventId={event.id} />
+              </div>
+            </div>
+          )}
 
-      <div className="mt-3">
-        <EventLifecycle eventId={event.id} status={event.status} />
-      </div>
-
-      {event.status === "published" && !locked && (
-        <div className="mt-3">
-          <LockEventButton eventId={event.id} />
-        </div>
-      )}
-
-      <section className="mt-8 rounded-2xl border border-line bg-surface/60 p-5">
-        <p className="text-sm text-muted">{t("publicLinkHint")}</p>
-        {event.status !== "published" && (
-          <p className="mt-2 text-sm text-amber">{t("draftLinkHint")}</p>
-        )}
-        <div className="mt-3 flex flex-wrap items-center gap-3">
-          <CopyLinkButton slug={event.slug} />
-          {event.status === "published" && (
-            <a
-              href={`/${event.slug}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-sm font-medium text-iris underline-offset-2 hover:underline"
+          <div className="flex flex-wrap gap-3">
+            <Link
+              href={`/dashboard/events/${event.id}/edit`}
+              className="inline-flex h-10 items-center justify-center rounded-lg border border-line px-4 text-sm font-semibold text-paper transition hover:bg-surface-2"
             >
-              {t("previewAsGuest")}
-            </a>
-          )}
-        </div>
-      </section>
-
-      <section className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3">
-        <Stat label={t("statGoing")} value={String(goingCount)} accent />
-        <Stat label={t("statMaybe")} value={String(maybe.length)} />
-        <Stat
-          label={event.capacity != null ? t("statSpotsLeft") : t("statCapacity")}
-          value={event.capacity == null ? t("noLimit") : isFull ? t("full") : String(remaining)}
-        />
-      </section>
-
-      {isFull && <p className="mt-3 text-sm text-muted">{t("fullNotice")}</p>}
-
-      <section className="mt-10">
-        <div className="flex items-center justify-between gap-3">
-          <h2 className="eyebrow">{t("guestList")}</h2>
-          <CopyContactsButton contacts={contacts} />
-        </div>
-        {going.length + maybe.length + declined.length === 0 ? (
-          <p className="mt-3 text-sm text-muted">{t("noReplies")}</p>
-        ) : (
-          <div className="mt-4 space-y-6">
-            <GuestGroup status="going" rows={going} t={t} />
-            <GuestGroup status="maybe" rows={maybe} t={t} />
-            <GuestGroup status="not_going" rows={declined} t={t} />
+              {t("editEvent")}
+            </Link>
           </div>
-        )}
-      </section>
 
-      {locked && (
-        <section className="mt-10">
-          <h2 className="eyebrow">{t("contactsHeading")}</h2>
-          {guestContacts.length === 0 ? (
-            <p className="mt-3 text-sm text-muted">{t("contactsClosed")}</p>
-          ) : (
-            <ul className="mt-4 divide-y divide-line/60 rounded-xl border border-line bg-surface/40">
-              {guestContacts.map((c, i) => (
-                <li key={`${c.wechat_id}-${i}`} className="flex items-center justify-between gap-3 px-4 py-3">
-                  <div className="min-w-0">
-                    <p className="truncate text-paper">{c.display_name || t("guestFallback")}</p>
-                    <p className="truncate font-mono text-sm text-muted">{c.wechat_id}</p>
-                  </div>
-                  <CopyText value={c.wechat_id} />
-                </li>
-              ))}
-            </ul>
+          <div className="mt-3">
+            <EventLifecycle eventId={event.id} status={event.status} />
+          </div>
+
+          {/* Manual lock affordance for the not-yet-full case (the full case is the prompt
+              above). Hidden once locked or unpublished, same as before the re-nesting. */}
+          {event.status === "published" && !locked && !fullPending && (
+            <div className="mt-3">
+              <LockEventButton eventId={event.id} />
+            </div>
           )}
-        </section>
-      )}
 
-      {waitlist.length > 0 && (
-        <section className="mt-10">
-          <h2 className="eyebrow">{t("waitlistHeading", { count: waitlist.length })}</h2>
-          <p className="mt-1 text-sm text-muted">{t("waitlistHint")}</p>
-          <ul className="mt-4 divide-y divide-line/60 rounded-xl border border-line bg-surface/40">
-            {waitlist.map((r) => (
-              <li key={r.id} className="flex items-center justify-between gap-3 px-4 py-3">
-                <div className="min-w-0">
-                  <p className="truncate text-paper">
-                    {r.guests?.display_name ?? t("guestFallback")}
-                    {r.plus_ones > 0 && <span className="ml-1 text-sm text-muted">+{r.plus_ones}</span>}
-                  </p>
-                  {r.guests?.contact && <p className="truncate text-sm text-muted">{r.guests.contact}</p>}
-                </div>
-                <PromoteButton rsvpId={r.id} eventId={event.id} />
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
+          <section className="mt-6 rounded-2xl border border-line bg-surface/60 p-5">
+            <p className="text-sm text-muted">{t("publicLinkHint")}</p>
+            {event.status !== "published" && (
+              <p className="mt-2 text-sm text-amber">{t("draftLinkHint")}</p>
+            )}
+            <div className="mt-3 flex flex-wrap items-center gap-3">
+              <CopyLinkButton slug={event.slug} />
+              {event.status === "published" && (
+                <a
+                  href={`/${event.slug}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm font-medium text-iris underline-offset-2 hover:underline"
+                >
+                  {t("previewAsGuest")}
+                </a>
+              )}
+            </div>
+          </section>
+
+          <section className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3">
+            <Stat label={t("statGoing")} value={String(goingCount)} accent />
+            <Stat label={t("statMaybe")} value={String(maybe.length)} />
+            <Stat
+              label={event.capacity != null ? t("statSpotsLeft") : t("statCapacity")}
+              value={event.capacity == null ? t("noLimit") : isFull ? t("full") : String(remaining)}
+            />
+          </section>
+
+          {isFull && <p className="mt-3 text-sm text-muted">{t("fullNotice")}</p>}
+
+          <section className="mt-10">
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="eyebrow">{t("guestList")}</h2>
+              <CopyContactsButton contacts={contacts} />
+            </div>
+            {going.length + maybe.length + declined.length === 0 ? (
+              <p className="mt-3 text-sm text-muted">{t("noReplies")}</p>
+            ) : (
+              <div className="mt-4 space-y-6">
+                <GuestGroup status="going" rows={going} t={t} />
+                <GuestGroup status="maybe" rows={maybe} t={t} />
+                <GuestGroup status="not_going" rows={declined} t={t} />
+              </div>
+            )}
+          </section>
+
+          {locked && (
+            <section className="mt-10">
+              <h2 className="eyebrow">{t("contactsHeading")}</h2>
+              {guestContacts.length === 0 ? (
+                <p className="mt-3 text-sm text-muted">{t("contactsClosed")}</p>
+              ) : (
+                <ul className="mt-4 divide-y divide-line/60 rounded-xl border border-line bg-surface/40">
+                  {guestContacts.map((c, i) => (
+                    <li key={`${c.wechat_id}-${i}`} className="flex items-center justify-between gap-3 px-4 py-3">
+                      <div className="min-w-0">
+                        <p className="truncate text-paper">{c.display_name || t("guestFallback")}</p>
+                        <p className="truncate font-mono text-sm text-muted">{c.wechat_id}</p>
+                      </div>
+                      <CopyText value={c.wechat_id} />
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
+          )}
+
+          {waitlist.length > 0 && (
+            <section className="mt-10">
+              <h2 className="eyebrow">{t("waitlistHeading", { count: waitlist.length })}</h2>
+              <p className="mt-1 text-sm text-muted">{t("waitlistHint")}</p>
+              <ul className="mt-4 divide-y divide-line/60 rounded-xl border border-line bg-surface/40">
+                {waitlist.map((r) => (
+                  <li key={r.id} className="flex items-center justify-between gap-3 px-4 py-3">
+                    <div className="min-w-0">
+                      <p className="truncate text-paper">
+                        {r.guests?.display_name ?? t("guestFallback")}
+                        {r.plus_ones > 0 && <span className="ml-1 text-sm text-muted">+{r.plus_ones}</span>}
+                      </p>
+                      {r.guests?.contact && <p className="truncate text-sm text-muted">{r.guests.contact}</p>}
+                    </div>
+                    <PromoteButton rsvpId={r.id} eventId={event.id} />
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+        </EventCard>
+      </div>
     </div>
   );
 }

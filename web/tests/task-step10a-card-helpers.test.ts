@@ -134,6 +134,30 @@ describe("step-10A card.ts: gatheringStatus (成局进度 public board)", () => 
       gatheringStatus({ capacity: undefined, goingCount: 100, isLocked: undefined }),
     ).toBe("open");
   });
+
+  // Step-10A task 5 — 满→提示成局 contract (README ⚠️ 成局 ≠ 锁定). The host page's
+  // "可成局了，确认成局？" prompt fires EXACTLY on this helper's `full-pending`: full but
+  // not yet formed. These pin the precise trigger boundary the prompt depends on.
+  it("[满→提示成局] full-pending == (going ≥ capacity) AND NOT formed — the prompt trigger", () => {
+    // At/over the boundary while open → prompt-eligible.
+    expect(gatheringStatus({ capacity: 6, goingCount: 6, isLocked: false })).toBe("full-pending");
+    expect(gatheringStatus({ capacity: 6, goingCount: 8, isLocked: false })).toBe("full-pending");
+    // One short of full → still open, NO prompt.
+    expect(gatheringStatus({ capacity: 6, goingCount: 5, isLocked: false })).toBe("open");
+  });
+
+  it("[满→提示成局] confirming/forming (isLocked) flips full-pending → formed — prompt clears", () => {
+    // The SAME full headcount, once the host confirms (locked), is no longer pending.
+    expect(gatheringStatus({ capacity: 6, goingCount: 6, isLocked: false })).toBe("full-pending");
+    expect(gatheringStatus({ capacity: 6, goingCount: 6, isLocked: true })).toBe("formed");
+  });
+
+  it("[满→提示成局] a full-but-formed gathering is NEVER full-pending (no re-prompt after 成局)", () => {
+    // Whatever signals a formed event (manual confirm folded into isLocked at this layer),
+    // it must read `formed`, never `full-pending` — the prompt must not re-fire post-成局.
+    expect(gatheringStatus({ capacity: 6, goingCount: 6, isLocked: true })).not.toBe("full-pending");
+    expect(gatheringStatus({ capacity: 6, goingCount: 12, isLocked: true })).not.toBe("full-pending");
+  });
 });
 
 describe("step-10A card.ts: initialCardState (which face the card OPENS on)", () => {

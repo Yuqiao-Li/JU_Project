@@ -606,3 +606,138 @@ describe("task 5 [H11]: host detail page builds the contact list from going+mayb
     expect(/CopyContactsButton contacts=\{contacts\}/.test(DETAIL), "list handed to the button").toBe(true);
   });
 });
+
+/**
+ * Step-10A task 5 — 局卡中心化 (UPDATE of the host-detail structure pins above).
+ *
+ * Re-pinned for the 局卡-centric re-nesting WITHOUT relaxing what the page must do.
+ * The intent of the original task-2.3 host-detail structure is unchanged and is
+ * re-asserted here against the new shape:
+ *   - the page is host-only (loads over the host's OWN RLS path → notFound for a
+ *     non-owner; this is a SECURITY DEFINER / RLS read, never a public one);
+ *   - the full roster (going/maybe/not_going/waitlist) + lifecycle + manual lock +
+ *     waitlist promote are all STILL rendered (no capability dropped in the re-nest);
+ *   - contact is still host-visible metadata (read off guests.contact on the host
+ *     path), and the locked-only unlocked-contacts (WeChat) panel is STILL gated.
+ * The re-nesting itself is presentational: every block now lives inside the shared
+ * 局卡 (EventCard) as its expand children, opening on 态2 个人化.
+ *
+ * Source-grep, no DB — the data-path security is proved in the task-2.3 adversarial
+ * suite; this file pins the page COMPOSITION the redesign must preserve.
+ */
+describe("step-10A task 5 [局卡中心化]: host detail re-nests management inside the shared 局卡", () => {
+  const DETAIL = src("app/dashboard/events/[id]/page.tsx");
+
+  it("renders the shared EventCard as the host hero, mode=host opening on 态2 个人化 (personal)", () => {
+    expect(DETAIL, "imports the shared EventCard").toContain('from "@/components/events/event-card"');
+    expect(/<EventCard\b/.test(DETAIL), "renders an EventCard").toBe(true);
+    expect(/mode="host"/.test(DETAIL), "the host card is mode=host").toBe(true);
+    expect(/initialState="personal"/.test(DETAIL), "opens on 态2 个人化").toBe(true);
+  });
+
+  it("feeds the card the public-façade numbers, not a guest留位 record (record={null})", () => {
+    // The host is not a guest of their own event: no cached RSVP standing.
+    expect(/record=\{null\}/.test(DETAIL), "host card carries no guest record").toBe(true);
+    // The card's own 成局 board is driven by the derived lock + live going count.
+    expect(/goingCount=\{goingCount\}/.test(DETAIL), "card gets the live going occupancy").toBe(true);
+    expect(/isLocked=\{locked\}/.test(DETAIL), "card lock board uses the derived lock").toBe(true);
+  });
+
+  it("STILL renders the full roster — every status group, not just the guest-visible ones", () => {
+    // The third-tier statuses (declined + waitlist) the host alone may see must remain.
+    for (const status of ["going", "maybe", "not_going"]) {
+      expect(/<GuestGroup\b[\s\S]*status="going"/.test(DETAIL), "going group present").toBe(true);
+      expect(new RegExp(`status="${status}"`).test(DETAIL), `roster shows the ${status} group`).toBe(true);
+    }
+    expect(DETAIL, "waitlist group still rendered").toContain("waitlist.map(");
+  });
+
+  it("STILL renders the management lifecycle / lock / waitlist-promote controls (nothing dropped)", () => {
+    expect(DETAIL, "lifecycle control present").toContain("<EventLifecycle");
+    expect(DETAIL, "manual lock control present").toContain("<LockEventButton");
+    expect(DETAIL, "waitlist promote control present").toContain("<PromoteButton");
+    // The not-yet-full manual lock affordance stays gated to a published, unlocked event.
+    expect(
+      /event\.status === "published" && !locked && !fullPending/.test(DETAIL),
+      "manual lock stays gated to published + unlocked + not-full",
+    ).toBe(true);
+  });
+
+  it("contact stays HOST-VISIBLE metadata — read off the host roster path (guests.contact)", () => {
+    expect(DETAIL, "roster selects guests' contact on the host path").toContain("guests(display_name, contact)");
+    // The roster query is the host's own RLS read on rsvps (not a public RPC).
+    expect(/\.from\("rsvps"\)/.test(DETAIL), "roster reads rsvps over the host RLS path").toBe(true);
+  });
+
+  it("the unlocked-contacts (WeChat) panel is STILL gated to a locked event via the DEFINER RPC", () => {
+    // Gate 1: the gated contacts RPC only runs when the event is locked.
+    expect(
+      /if \(locked\) \{[\s\S]*get_event_guest_contacts/.test(DETAIL),
+      "guest WeChat is fetched only when locked, via the gated RPC",
+    ).toBe(true);
+    // Gate 2: the panel itself only renders under the locked branch.
+    expect(/\{locked && \(/.test(DETAIL), "the contacts panel renders only when locked").toBe(true);
+    // It surfaces wechat_id (the locked-only second-way reveal), never the bare token.
+    expect(DETAIL, "panel shows the unlocked WeChat id").toContain("wechat_id");
+  });
+});
+
+/**
+ * Step-10A task 5 — 满 → 提示成局 (README 跨页契约 · ⚠️ 成局 ≠ 锁定).
+ *
+ * The host page raises a "可成局了，确认成局？" prompt when the gathering is FULL but
+ * the host has NOT manually confirmed. The exact contract (from card.ts gatheringStatus,
+ * already unit-tested as `full-pending`): the prompt fires on
+ *     going occupancy ≥ a REAL capacity  AND  the event is NOT YET formed,
+ * and a PURE time-derived auto-lock must NOT raise it (auto-lock ≠ 成局). At the page
+ * layer the "not yet formed" signal is `locked_at IS NULL` — the raw manual-lock
+ * timestamp — NOT the derived `locked`/`is_locked` (which folds the time-based auto-lock
+ * in). So the prompt must key on capacity + locked_at, never is_locked.
+ *
+ * Source-grep — the page derives the trigger inline; the underlying boolean math is
+ * proven purely by the card.ts gatheringStatus suite (full-pending branch).
+ */
+describe("step-10A task 5 [满→提示成局]: the host prompt keys on capacity + locked_at, never on auto-lock", () => {
+  const DETAIL = src("app/dashboard/events/[id]/page.tsx");
+
+  it("derives fullPending from a REAL capacity + full occupancy + locked_at IS NULL", () => {
+    // capacity must be set (a real target — unbounded events never go 'full').
+    expect(/event\.capacity != null/.test(DETAIL), "trigger requires a real capacity").toBe(true);
+    // occupancy meets the target (remaining seats === 0).
+    expect(/remaining === 0/.test(DETAIL), "trigger requires the cap to be met (满)").toBe(true);
+    // host has NOT manually confirmed: the RAW timestamp is still null.
+    expect(/event\.locked_at == null/.test(DETAIL), "trigger requires locked_at IS NULL (未手动成局)").toBe(true);
+  });
+
+  it("the trigger does NOT key on the time-derived auto-lock (is_locked / `locked`)", () => {
+    // The fullPending expression must gate on locked_at, never on is_locked — a pure
+    // auto-lock (is_locked true, locked_at still null) must NOT raise the prompt.
+    const fp = /const fullPending\s*=\s*([^;]+);/.exec(DETAIL)?.[1] ?? "";
+    expect(fp.length, "fullPending is computed in the page").toBeGreaterThan(0);
+    expect(fp.includes("locked_at"), "fullPending keys on locked_at").toBe(true);
+    expect(fp.includes("is_locked"), "fullPending must NOT key on is_locked").toBe(false);
+    // It also must not collapse onto the derived `locked` boolean (the auto-lock fold).
+    expect(/fullPending\s*=\s*[^;]*\blocked\b(?!_at)/.test(DETAIL), "fullPending must not use derived `locked`").toBe(false);
+  });
+
+  it("when fullPending, renders the 成局 prompt that drives the EXISTING lock flow (no new RPC)", () => {
+    // The prompt is conditional on fullPending and wires the existing LockEventButton.
+    expect(/\{fullPending && \(/.test(DETAIL), "the prompt is gated on fullPending").toBe(true);
+    // Within the prompt block (between the fullPending guard and the next sibling block),
+    // the existing LockEventButton drives the lock_event flow — no new RPC introduced.
+    const afterGuard = DETAIL.slice(DETAIL.indexOf("{fullPending && ("));
+    const promptBlock = afterGuard.slice(0, afterGuard.indexOf("<div className=\"flex flex-wrap gap-3\">"));
+    expect(promptBlock.includes("LockEventButton"), "the prompt reuses the lock_event flow").toBe(true);
+    expect(promptBlock.includes("formPromptHeading"), "prompt heading key inside the prompt block").toBe(true);
+    expect(promptBlock.includes("formPromptBody"), "prompt body key inside the prompt block").toBe(true);
+  });
+
+  it("the 满→提示成局 message keys exist in both locales", () => {
+    const en = JSON.parse(src("messages/en.json")).hostEvent;
+    const zh = JSON.parse(src("messages/zh.json")).hostEvent;
+    for (const k of ["formPromptHeading", "formPromptBody"] as const) {
+      expect(en[k], `en hostEvent.${k} exists`).toBeTruthy();
+      expect(zh[k], `zh hostEvent.${k} exists`).toBeTruthy();
+    }
+  });
+});

@@ -235,7 +235,9 @@
     "contactsClosed": "The contacts window is closed.",
     "contactsCopy": "Copy",
     "contactsCopied": "Copied",
-    "lockFailed": "Couldn’t lock the event. Try again."
+    "lockFailed": "Couldn’t lock the event. Try again.",
+    "formPromptHeading": "Ready to lock it in?",
+    "formPromptBody": "Every spot is filled. Confirming locks this event — both sides’ WeChat opens up and new RSVPs stop."
   },
   "settings": {
     "backToEvents": "Back to events",

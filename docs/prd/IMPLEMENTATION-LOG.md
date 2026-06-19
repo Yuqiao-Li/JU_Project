@@ -8,7 +8,7 @@
 2. 局卡组件 + `next/og` 图片路由 + QR 生成库 — ✅ 完成（**QR 库安装待你**）
 3. 建局（成局目标=capacity reframe / 发布校验 +时间/TBD+城市 / category+card_variant；选局卡视觉 picker→Step 10B）— ✅ 完成
 4. 局详情（改造 `EventClient`：局卡顶+留位，移 slot，保地址 reveal）— ✅ 完成
-5. 管理（改造 `[id]/page`：局卡+展开管理 / 满→提示成局 wiring）
+5. 管理（改造 `[id]/page`：局卡+展开管理 / 满→提示成局 wiring）— ✅ 完成
 6. 仪表盘（局卡顶 + 一键复用 `/new?from=`）
 7. 设置（昵称合并 / host 通用联系方式 / 去 `/u/`）
 8. 发现（紧凑局卡 + 静默隐藏过滤）
@@ -36,4 +36,10 @@
 - **分级安全保留**：地址仅 `event.unlocked` 时渲染（EventView Where 段未改、location_text 只读一次）；RSVP 仍 `!inactive && !locked` 门控；取消/结束/锁定横幅 + host 微信票根 stub 不变。管线全保留（token/poll/handleSubmitted/ended/viewerIsHost/密码解锁路径）。
 - 测试：测试 agent 把 `task-4-lifecycle.test.ts` 的脆弱 JSX grep 改写成行为/安全不变量断言（地址解锁门控、RSVP 门控、locked 横幅、卡作 hero）；`task-3.1-guest-list.test.ts` 一条失效 grep 重定向到组件层。
 - 门禁：vitest **727/727**、护栏 **8/8**。
-- 任务 4 ✅ → 任务 5 进行中。
+
+### 任务 5 — 管理 局卡中心化 + 满→提示成局　【✅ 完成 2026-06-19】
+- `[id]/page.tsx`（仍服务端、RLS 读名单）重排为 EventCard(host 态2)hero + 管理内容作 card 展开 children（统计/名单组/复制联系方式/候补 promote/EventLifecycle/LockEventButton/R4 成局后联系方式面板全保留）。标题/状态徽章/日期留在卡上方作页面 chrome（占位卡无标题槽）。
+- **满→提示成局**：页面级 `fullPending = capacity!=null && remaining===0 && locked_at==null`（**用 locked_at 不用 is_locked**，自动锁不触发，贴"成局≠锁定"）→ 醒目"可成局了，确认成局？"提示，复用 R4 的 LockEventButton（无新 RPC）。独立手动锁入口加 `&& !fullPending` 去重。
+- 测试：`task-5-host-ux.test.ts` 重定向到新结构（管理控件保留、contact host-only、成局后联系方式面板仍 locked-gated）；`card-helpers` 加 gatheringStatus full-pending 边界断言。
+- 门禁：vitest **740/740**、护栏 **8/8**。
+- 任务 5 ✅ → 任务 6 进行中。
